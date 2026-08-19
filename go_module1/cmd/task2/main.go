@@ -32,26 +32,22 @@ func mapMahasiswa() {
 		"MahasiswaCC": 69,
 	}
 
-	// Menelusuri isi setelah perubahan
 	fmt.Println("Kondisi awal:")
 	for key, value := range nilaiMahasiswa {
 		fmt.Printf("%s: %v\n", key, value)
 	}
 
-	// Tambah entry baru
+	fmt.Println("\n2C - Operasi Map Nilai Mahasiswa")
+	fmt.Println("---")
 	nilaiMahasiswa["MahasiswaDD"] = 77
-
-	// Cek nilai
-	nilai, exists := nilaiMahasiswa["MahasiswaAA"]
+	nilai, exists := nilaiMahasiswa["MahasiswaDD"]
 	if exists {
-		fmt.Println("\nCek Nilai MahasiswaAA	=", nilai)
+		fmt.Println("Cek Nilai MahasiswaDD	=", nilai)
 	}
 
-	// Delete nilai
 	delete(nilaiMahasiswa, "MahasiswaAA")
 
-	// Menelusuri isi setelah perubahan
-	fmt.Println("\nKondisi akhir:")
+	fmt.Println("\nKondisi akhir (delete MahasiswaAA):")
 	for key, value := range nilaiMahasiswa {
 		fmt.Printf("%s: %v\n", key, value)
 	}
