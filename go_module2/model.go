@@ -4,7 +4,7 @@ import "time"
 
 type Student struct {
 	ID        int       `json:"id"`
-	NIM       int       `json:"nim"`
+	NIM       string    `json:"nim"`
 	Name      string    `json:"name"`
 	Grade     float64   `json:"grade"`
 	IsActive  bool      `json:"is_active"`
@@ -13,7 +13,7 @@ type Student struct {
 
 // POST
 type CreateStudentRequest struct {
-	NIM      int     `json:"nim"`
+	NIM      string  `json:"nim"`
 	Name     string  `json:"name"`
 	Grade    float64 `json:"grade"`
 	IsActive bool    `json:"is_active"`
@@ -21,7 +21,7 @@ type CreateStudentRequest struct {
 
 // PUT
 type ReplaceStudentRequest struct {
-	NIM      int     `json:"nim"`
+	NIM      string  `json:"nim"`
 	Name     string  `json:"name"`
 	Grade    float64 `json:"grade"`
 	IsActive bool    `json:"is_active"`
@@ -29,7 +29,7 @@ type ReplaceStudentRequest struct {
 
 // PATCH
 type PatchStudentRequest struct {
-	NIM      *int     `json:"nim,omitempty"`
+	NIM      *string  `json:"nim,omitempty"`
 	Name     *string  `json:"name,omitempty"`
 	Grade    *float64 `json:"grade,omitempty"`
 	IsActive *bool    `json:"is_active,omitempty"`
@@ -58,4 +58,5 @@ type ListQuery struct {
 	Sort     string
 	Order    string
 	IsActive *bool
+	MinGrade *float64
 }
