@@ -1,1 +1,61 @@
 package main
+
+import "time"
+
+type Student struct {
+	ID        int       `json:"id"`
+	NIM       int       `json:"nim"`
+	Name      string    `json:"name"`
+	Grade     float64   `json:"grade"`
+	IsActive  bool      `json:"is_active"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// POST
+type CreateUserRequest struct {
+	NIM      int     `json:"nim"`
+	Name     string  `json:"name"`
+	Grade    float64 `json:"grade"`
+	IsActive bool    `json:"is_active"`
+}
+
+// PUT
+type ReplaceUserRequest struct {
+	NIM      int     `json:"nim"`
+	Name     string  `json:"name"`
+	Grade    float64 `json:"grade"`
+	IsActive bool    `json:"is_active"`
+}
+
+// PATCH
+type PatchUserRequest struct {
+	NIM      *int     `json:"nim,omitempty"`
+	Name     *string  `json:"name,omitempty"`
+	Grade    *float64 `json:"grade,omitempty"`
+	IsActive *bool    `json:"is_active,omitempty"`
+}
+
+// RESPONSE TEMPLATE
+type WebResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Data    any    `json:"data,omitempty"`
+	Meta    *Meta  `json:"meta,omitempty"`
+	Errors  any    `json:"errors,omitempty"`
+}
+
+type Meta struct {
+	Page       int `json:"page"`
+	Limit      int `json:"limit"`
+	Total      int `json:"total"`
+	TotalPages int `json:"total_pages"`
+}
+
+type ListQuery struct {
+	Page     int
+	Limit    int
+	Search   string
+	Sort     string
+	Order    string
+	IsActive *bool
+}
