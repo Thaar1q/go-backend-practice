@@ -74,62 +74,13 @@ go run .
 Base URL: `http://localhost:3000/api/v1/students`
 
 | Method | Endpoint | Query / Path Parameters | Request Body (JSON) | Possible Statuses | Response Body Example |
-| --- | --- | --- | --- | --- | --- |
-| `GET` | `/api/v1/students` | `page` (int, default 1)<br>
-
-<br>`limit` (int, default 10, max 100)<br>
-
-<br>`search` (string, case-insensitive)<br>
-
-<br>`sort` (id, nim, name, grade)<br>
-
-<br>`order` (asc, desc)<br>
-
-<br>`is_active` (bool) | *(None)* | `200 OK` | `{"success": true, "message": "daftar mahasiswa berhasil diambil", "data": [...], "meta": {"page": 1, "limit": 10, "total": 1, "total_pages": 1}}` |
-| `GET` | `/api/v1/students/:id` | `:id` (int, path) | *(None)* | `200 OK`<br>
-
-<br>`400 Bad Request`<br>
-
-<br>`404 Not Found` | `{"success": true, "message": "mahasiswa ditemukan", "data": {"id": 1, "nim": "000000001", "name": "mahasiswaAA", "grade": 3.75, "is_active": true, "created_at": "..."}}` |
-| `POST` | `/api/v1/students` | *(None)* | `{"nim": "000000001", "name": "mahasiswaAA", "grade": 3.75}` | `201 Created`<br>
-
-<br>`400 Bad Request`<br>
-
-<br>`409 Conflict`<br>
-
-<br>`415 Unsupported Media Type`<br>
-
-<br>`422 Unprocessable Entity` | `{"success": true, "message": "mahasiswa berhasil dibuat", "data": {...}}`<br>
-
-<br>*Header: Location: /api/v1/students/1* |
-| `PUT` | `/api/v1/students/:id` | `:id` (int, path) | `{"nim": "000000001", "name": "mahasiswaAA_baru", "grade": 3.80, "is_active": false}` *(All fields mandatory)* | `200 OK`<br>
-
-<br>`400 Bad Request`<br>
-
-<br>`404 Not Found`<br>
-
-<br>`409 Conflict`<br>
-
-<br>`415 Unsupported Media Type`<br>
-
-<br>`422 Unprocessable Entity` | `{"success": true, "message": "mahasiswa berhasil diganti seluruhnya", "data": {...}}` |
-| `PATCH` | `/api/v1/students/:id` | `:id` (int, path) | `{"grade": 3.90}` *(Only modified fields required)* | `200 OK`<br>
-
-<br>`400 Bad Request`<br>
-
-<br>`404 Not Found`<br>
-
-<br>`409 Conflict`<br>
-
-<br>`415 Unsupported Media Type`<br>
-
-<br>`422 Unprocessable Entity` | `{"success": true, "message": "mahasiswa berhasil diperbarui sebagian", "data": {...}}` |
-| `DELETE` | `/api/v1/students/:id` | `:id` (int, path) | *(None)* | `204 No Content`<br>
-
-<br>`400 Bad Request`<br>
-
-<br>`404 Not Found` | *(Empty Body)* |
-
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `GET` | `/api/v1/students` | `page` (int, default 1)<br>`limit` (int, default 10, max 100)<br>`search` (string, case-insensitive)<br>`sort` (id, nim, name, grade)<br>`order` (asc, desc)<br>`is_active` (bool) | *(None)* | `200 OK` | `{"success": true, "message": "daftar mahasiswa berhasil diambil", "data": [...], "meta": {"page": 1, "limit": 10, "total": 1, "total_pages": 1}}` |
+| `GET` | `/api/v1/students/:id` | `:id` (int, path) | *(None)* | `200 OK`<br>`400 Bad Request`<br>`404 Not Found` | `{"success": true, "message": "mahasiswa ditemukan", "data": {"id": 1, "nim": "000000001", "name": "mahasiswaAA", "grade": 3.75, "is_active": true, "created_at": "..."}}` |
+| `POST` | `/api/v1/students` | *(None)* | `{"nim": "000000001", "name": "mahasiswaAA", "grade": 3.75}` | `201 Created`<br>`400 Bad Request`<br>`409 Conflict`<br>`415 Unsupported Media Type`<br>`422 Unprocessable Entity` | `{"success": true, "message": "mahasiswa berhasil dibuat", "data": {...}}`<br>*Header: Location: /api/v1/students/1* |
+| `PUT` | `/api/v1/students/:id` | `:id` (int, path) | `{"nim": "000000001", "name": "mahasiswaAA_baru", "grade": 3.80, "is_active": false}` *(All fields mandatory)* | `200 OK`<br>`400 Bad Request`<br>`404 Not Found`<br>`409 Conflict`<br>`415 Unsupported Media Type`<br>`422 Unprocessable Entity` | `{"success": true, "message": "mahasiswa berhasil diganti seluruhnya", "data": {...}}` |
+| `PATCH` | `/api/v1/students/:id` | `:id` (int, path) | `{"grade": 3.90}` *(Only modified fields required)* | `200 OK`<br>`400 Bad Request`<br>`404 Not Found`<br>`409 Conflict`<br>`415 Unsupported Media Type`<br>`422 Unprocessable Entity` | `{"success": true, "message": "mahasiswa berhasil diperbarui sebagian", "data": {...}}` |
+| `DELETE`| `/api/v1/students/:id` | `:id` (int, path) | *(None)* | `204 No Content`<br>`400 Bad Request`<br>`404 Not Found` | *(Empty Body)* |
 ---
 
 ## References Used
