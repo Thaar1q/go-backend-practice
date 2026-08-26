@@ -174,8 +174,10 @@ func replaceStudent(c *fiber.Ctx) error {
 	if strings.TrimSpace(req.Name) == "" {
 		errs["name"] = "wajib diisi pada PUT"
 	}
-	if req.Grade < 0 || req.Grade > 4.0 {
-		errs["grade"] = "wajib diisi dan harus di antara 0.0 - 4.0"
+	if req.Grade == nil {
+		errs["grade"] = "wajib diisi pada PUT"
+	} else if *req.Grade < 0 || *req.Grade > 4.0 {
+		errs["grade"] = "harus di antara 0.0 - 4.0"
 	}
 	for idx, s := range students {
 		if idx != i && strings.EqualFold(s.NIM, req.NIM) {
@@ -188,7 +190,7 @@ func replaceStudent(c *fiber.Ctx) error {
 
 	students[i].NIM = req.NIM
 	students[i].Name = req.Name
-	students[i].Grade = req.Grade
+	students[i].Grade = *req.Grade
 	students[i].IsActive = req.IsActive
 
 	return ok(c, "mahasiswa berhasil diganti seluruhnya", students[i])
