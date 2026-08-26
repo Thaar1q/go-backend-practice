@@ -21,10 +21,10 @@ type CreateStudentRequest struct {
 
 // PUT
 type ReplaceStudentRequest struct {
-	NIM      string  `json:"nim"`
-	Name     string  `json:"name"`
-	Grade    float64 `json:"grade"`
-	IsActive bool    `json:"is_active"`
+	NIM      string   `json:"nim"`
+	Name     string   `json:"name"`
+	Grade    *float64 `json:"grade"`
+	IsActive bool     `json:"is_active"`
 }
 
 // PATCH
