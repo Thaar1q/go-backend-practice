@@ -12,7 +12,7 @@ type Student struct {
 }
 
 // POST
-type CreateUserRequest struct {
+type CreateStudentRequest struct {
 	NIM      int     `json:"nim"`
 	Name     string  `json:"name"`
 	Grade    float64 `json:"grade"`
@@ -20,7 +20,7 @@ type CreateUserRequest struct {
 }
 
 // PUT
-type ReplaceUserRequest struct {
+type ReplaceStudentRequest struct {
 	NIM      int     `json:"nim"`
 	Name     string  `json:"name"`
 	Grade    float64 `json:"grade"`
@@ -28,7 +28,7 @@ type ReplaceUserRequest struct {
 }
 
 // PATCH
-type PatchUserRequest struct {
+type PatchStudentRequest struct {
 	NIM      *int     `json:"nim,omitempty"`
 	Name     *string  `json:"name,omitempty"`
 	Grade    *float64 `json:"grade,omitempty"`
