@@ -60,7 +60,7 @@ func main() {
 		return ok(c, "server berjalan", fiber.Map{"timestamp": time.Now()})
 	})
 
-	u := api.Group("/student", requireJSON)
+	u := api.Group("/students", requireJSON)
 	u.Get("/", listStudents)
 	u.Get("/:id", getStudent)
 	u.Post("/", createStudent)
