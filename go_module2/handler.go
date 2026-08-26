@@ -177,8 +177,8 @@ func replaceStudent(c *fiber.Ctx) error {
 	if req.Grade < 0 || req.Grade > 4.0 {
 		errs["grade"] = "wajib diisi dan harus di antara 0.0 - 4.0"
 	}
-	for _, s := range students {
-		if strings.EqualFold(s.NIM, req.NIM) {
+	for idx, s := range students {
+		if idx != i && strings.EqualFold(s.NIM, req.NIM) {
 			return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
 		}
 	}
@@ -218,8 +218,8 @@ func patchStudent(c *fiber.Ctx) error {
 		if strings.TrimSpace(*req.NIM) == "" {
 			return failValidation(c, map[string]string{"nim": "tidak boleh kosong"})
 		}
-		for _, s := range students {
-			if strings.EqualFold(s.NIM, *req.NIM) {
+		for idx, s := range students {
+			if idx != i && strings.EqualFold(s.NIM, *req.NIM) {
 				return fail(c, fiber.StatusConflict, "NIM sudah digunakan")
 			}
 		}
