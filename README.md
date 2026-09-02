@@ -73,26 +73,36 @@ DB_MAX_CONNS=10
 
 ##### Installation & Execution
 1. Clone the repository:
+   ```
    git clone https://github.com/Thaar1q/go-backend-practice.git
    cd go-backend-practice
+   ```
 
 2. Download and verify dependencies:
+   ```
    go mod tidy
+   ```
 
 3. Run the tasks / modules:
    * Module 1:
+     ```
      go run ./cmd/task1/main.go
      go run ./cmd/task2/main.go
      go run ./cmd/task3/main.go
      go run ./cmd/task4/main.go
+     ```
 
    * Module 2:
+     ```
      cd go_module2
      go run .
+     ```
 
    * Module 3:
+     ```
      cd go_module3
      go run .
+     ```
 
 ---
 
