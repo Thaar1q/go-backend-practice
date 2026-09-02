@@ -29,12 +29,25 @@ func paramID(c *fiber.Ctx) (int, bool) {
 	return id, true
 }
 
+func translateError(c *fiber.Ctx, err error, pesanUmum string) error {
+	switch {
+	case errors.Is(err, repository.ErrNotFound):
+		return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
+	case errors.Is(err, repository.ErrDuplicate):
+		return fail(c, fiber.StatusConflict, "NIM sudah terdaftar")
+	default:
+		return fail(c, fiber.StatusInternalServerError, pesanUmum)
+	}
+}
+
 // 2. GET ALL (list)
 func (h *StudentHandler) ListStudents(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
 	q := parseListQuery(c)
 
 	// Fetch from DB
-	result, total, err := h.repo.FindAll(c.UserContext(), q)
+	result, total, err := h.repo.FindAll(ctx, q)
 	if err != nil {
 		return fail(c, fiber.StatusInternalServerError, "gagal mengambil daftar mahasiswa")
 	}
@@ -48,17 +61,16 @@ func (h *StudentHandler) ListStudents(c *fiber.Ctx) error {
 
 // 3. GET ONE
 func (h *StudentHandler) GetStudent(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
 		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
 	}
 
-	s, err := h.repo.FindByID(c.UserContext(), id)
+	s, err := h.repo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
-		}
-		return fail(c, fiber.StatusInternalServerError, "gagal mencari mahasiswa")
+		return translateError(c, err, "gagal mencari mahasiswa")
 	}
 
 	return ok(c, "mahasiswa ditemukan", s)
@@ -66,6 +78,8 @@ func (h *StudentHandler) GetStudent(c *fiber.Ctx) error {
 
 // 4. POST (Create)
 func (h *StudentHandler) CreateStudent(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
 	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
@@ -96,12 +110,9 @@ func (h *StudentHandler) CreateStudent(c *fiber.Ctx) error {
 	}
 
 	// Save to DB
-	createdItem, err := h.repo.Create(c.UserContext(), baru)
+	createdItem, err := h.repo.Create(ctx, baru)
 	if err != nil {
-		if errors.Is(err, repository.ErrDuplicate) {
-			return fail(c, fiber.StatusConflict, "NIM sudah terdaftar")
-		}
-		return fail(c, fiber.StatusInternalServerError, "gagal menyimpan mahasiswa")
+		return translateError(c, err, "gagal menyimpan mahasiswa")
 	}
 
 	return created(c, "mahasiswa berhasil dibuat", createdItem, "/api/v1/students/"+strconv.Itoa(createdItem.ID))
@@ -109,6 +120,8 @@ func (h *StudentHandler) CreateStudent(c *fiber.Ctx) error {
 
 // 5. PUT (Replace All)
 func (h *StudentHandler) ReplaceStudent(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
 		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
@@ -147,15 +160,9 @@ func (h *StudentHandler) ReplaceStudent(c *fiber.Ctx) error {
 	}
 
 	// Update DB
-	result, err := h.repo.Update(c.UserContext(), updated)
+	result, err := h.repo.Update(ctx, updated)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
-		}
-		if errors.Is(err, repository.ErrDuplicate) {
-			return fail(c, fiber.StatusConflict, "NIM sudah digunakan mahasiswa lain")
-		}
-		return fail(c, fiber.StatusInternalServerError, "gagal memperbarui mahasiswa")
+		return translateError(c, err, "gagal memperbarui mahasiswa")
 	}
 
 	return ok(c, "mahasiswa berhasil diganti seluruhnya", result)
@@ -163,6 +170,8 @@ func (h *StudentHandler) ReplaceStudent(c *fiber.Ctx) error {
 
 // 6. PATCH (Update Partial)
 func (h *StudentHandler) PatchStudent(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
 		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
@@ -178,12 +187,9 @@ func (h *StudentHandler) PatchStudent(c *fiber.Ctx) error {
 	}
 
 	// 1. Fetch current data to preserve unchanged fields
-	s, err := h.repo.FindByID(c.UserContext(), id)
+	s, err := h.repo.FindByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
-		}
-		return fail(c, fiber.StatusInternalServerError, "gagal mencari mahasiswa")
+		return translateError(c, err, "gagal mencari mahasiswa")
 	}
 
 	// 2. Validate and map new fields
@@ -217,12 +223,9 @@ func (h *StudentHandler) PatchStudent(c *fiber.Ctx) error {
 	}
 
 	// 3. Update DB
-	result, err := h.repo.Update(c.UserContext(), s)
+	result, err := h.repo.Update(ctx, s)
 	if err != nil {
-		if errors.Is(err, repository.ErrDuplicate) {
-			return fail(c, fiber.StatusConflict, "NIM sudah digunakan mahasiswa lain")
-		}
-		return fail(c, fiber.StatusInternalServerError, "gagal memperbarui mahasiswa")
+		return translateError(c, err, "gagal memperbarui mahasiswa")
 	}
 
 	return ok(c, "mahasiswa berhasil diperbarui sebagian", result)
@@ -230,17 +233,16 @@ func (h *StudentHandler) PatchStudent(c *fiber.Ctx) error {
 
 // 7. DELETE
 func (h *StudentHandler) DeleteStudent(c *fiber.Ctx) error {
+	ctx, cancel := reqCtx(c)
+	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
 		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
 	}
 
-	err := h.repo.Delete(c.UserContext(), id)
+	err := h.repo.Delete(ctx, id)
 	if err != nil {
-		if errors.Is(err, repository.ErrNotFound) {
-			return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
-		}
-		return fail(c, fiber.StatusInternalServerError, "gagal menghapus mahasiswa")
+		return translateError(c, err, "gagal menghapus mahasiswa")
 	}
 
 	return noContent(c)
