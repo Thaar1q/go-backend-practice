@@ -6,10 +6,12 @@ import (
 	"strings"
 	"time"
 
+	"go_module3/app/model"
+
 	"github.com/gofiber/fiber/v2"
 )
 
-var students []Student
+var students []model.Student
 var nextID = 1
 
 // Storage and Help
@@ -23,7 +25,7 @@ func findStudentIndex(id int) int {
 	return -1
 }
 
-func searchMatch(s Student, search string) bool {
+func searchMatch(s model.Student, search string) bool {
 	search = strings.ToLower(search)
 	return strings.Contains(strings.ToLower(s.Name), search)
 }
@@ -41,7 +43,7 @@ func listStudents(c *fiber.Ctx) error {
 	q := parseListQuery(c)
 
 	// 1 - Filter
-	result := []Student{}
+	result := []model.Student{}
 	for _, s := range students {
 		if q.IsActive != nil && s.IsActive != *q.IsActive {
 			continue
@@ -89,7 +91,7 @@ func listStudents(c *fiber.Ctx) error {
 		pageEnd = total
 	}
 
-	return okList(c, "daftar mahasiswa berhasil diambil", result[pageStart:pageEnd], &Meta{
+	return okList(c, "daftar mahasiswa berhasil diambil", result[pageStart:pageEnd], &model.Meta{
 		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
 	})
 }
@@ -109,7 +111,7 @@ func getStudent(c *fiber.Ctx) error {
 }
 
 func createStudent(c *fiber.Ctx) error {
-	var req CreateStudentRequest
+	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
@@ -136,7 +138,7 @@ func createStudent(c *fiber.Ctx) error {
 		return failValidation(c, errs)
 	}
 
-	newItem := Student{
+	newItem := model.Student{
 		ID:        nextID,
 		NIM:       req.NIM,
 		Name:      req.Name,
@@ -162,7 +164,7 @@ func replaceStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
 	}
 
-	var req ReplaceStudentRequest
+	var req model.ReplaceStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
@@ -207,7 +209,7 @@ func patchStudent(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
 	}
 
-	var req PatchStudentRequest
+	var req model.PatchStudentRequest
 	if err := c.BodyParser(&req); err != nil {
 		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
 	}
