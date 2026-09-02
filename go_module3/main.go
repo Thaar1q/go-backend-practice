@@ -76,6 +76,9 @@ func main() {
 	api := app.Group("/api/v1")
 
 	api.Get("/health", func(c *fiber.Ctx) error {
+		if err := pool.Ping(c.UserContext()); err != nil {
+			return fail(c, fiber.StatusServiceUnavailable, "database down")
+		}
 		return ok(c, "server berjalan", fiber.Map{"timestamp": time.Now()})
 	})
 
