@@ -60,9 +60,12 @@ CREATE INDEX IF NOT EXISTS idx_students_is_active ON students (is_active);
 
 ##### Environment Configuration
 Create a .env file in the root of the Module 3 project by copying .env.example:
+```
 cp .env.example .env
+```
 
 Fill in the environment variables according to your local setup:
+```
 DB_USER=postgres
 DB_PASSWORD=your_password
 DB_HOST=localhost
@@ -70,6 +73,7 @@ DB_PORT=5432
 DB_NAME=go_backend_practice
 DB_SSLMODE=disable
 DB_MAX_CONNS=10
+```
 
 ##### Installation & Execution
 1. Clone the repository:
