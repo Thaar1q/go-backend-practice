@@ -32,9 +32,9 @@ func paramID(c *fiber.Ctx) (int, bool) {
 func translateError(c *fiber.Ctx, err error, pesanUmum string) error {
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
-		return fail(c, fiber.StatusNotFound, "mahasiswa tidak ditemukan")
+		return fail(c, fiber.StatusNotFound, "student not found")
 	case errors.Is(err, repository.ErrDuplicate):
-		return fail(c, fiber.StatusConflict, "NIM sudah terdaftar")
+		return fail(c, fiber.StatusConflict, "NIM already registered")
 	default:
 		return fail(c, fiber.StatusInternalServerError, pesanUmum)
 	}
@@ -49,12 +49,12 @@ func (h *StudentHandler) ListStudents(c *fiber.Ctx) error {
 	// Fetch from DB
 	result, total, err := h.repo.FindAll(ctx, q)
 	if err != nil {
-		return fail(c, fiber.StatusInternalServerError, "gagal mengambil daftar mahasiswa")
+		return fail(c, fiber.StatusInternalServerError, "failed to fetch student list")
 	}
 
 	totalPages := (total + q.Limit - 1) / q.Limit
 
-	return okList(c, "daftar mahasiswa berhasil diambil", result, &model.Meta{
+	return okList(c, "student list successfully retrieved", result, &model.Meta{
 		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
 	})
 }
@@ -65,15 +65,15 @@ func (h *StudentHandler) GetStudent(c *fiber.Ctx) error {
 	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
-		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
+		return fail(c, fiber.StatusBadRequest, "id must be a positive number")
 	}
 
 	s, err := h.repo.FindByID(ctx, id)
 	if err != nil {
-		return translateError(c, err, "gagal mencari mahasiswa")
+		return translateError(c, err, "failed to find student")
 	}
 
-	return ok(c, "mahasiswa ditemukan", s)
+	return ok(c, "student found", s)
 }
 
 // 4. POST (Create)
@@ -82,7 +82,7 @@ func (h *StudentHandler) CreateStudent(c *fiber.Ctx) error {
 	defer cancel()
 	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
-		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
+		return fail(c, fiber.StatusBadRequest, "body must be valid JSON")
 	}
 
 	errs := map[string]string{}
@@ -90,13 +90,13 @@ func (h *StudentHandler) CreateStudent(c *fiber.Ctx) error {
 	req.Name = strings.TrimSpace(req.Name)
 
 	if req.NIM == "" {
-		errs["nim"] = "wajib diisi"
+		errs["nim"] = "is required"
 	}
 	if req.Name == "" {
-		errs["name"] = "wajib diisi"
+		errs["name"] = "is required"
 	}
 	if req.Grade < 0 || req.Grade > 4.0 {
-		errs["grade"] = "harus di antara 0.0 - 4.0"
+		errs["grade"] = "must be between 0.0 and 4.0"
 	}
 	if len(errs) > 0 {
 		return failValidation(c, errs)
@@ -112,10 +112,10 @@ func (h *StudentHandler) CreateStudent(c *fiber.Ctx) error {
 	// Save to DB
 	createdItem, err := h.repo.Create(ctx, baru)
 	if err != nil {
-		return translateError(c, err, "gagal menyimpan mahasiswa")
+		return translateError(c, err, "failed to save student")
 	}
 
-	return created(c, "mahasiswa berhasil dibuat", createdItem, "/api/v1/students/"+strconv.Itoa(createdItem.ID))
+	return created(c, "student successfully created", createdItem, "/api/v1/students/"+strconv.Itoa(createdItem.ID))
 }
 
 // 5. PUT (Replace All)
@@ -124,12 +124,12 @@ func (h *StudentHandler) ReplaceStudent(c *fiber.Ctx) error {
 	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
-		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
+		return fail(c, fiber.StatusBadRequest, "id must be a positive number")
 	}
 
 	var req model.ReplaceStudentRequest
 	if err := c.BodyParser(&req); err != nil {
-		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
+		return fail(c, fiber.StatusBadRequest, "body must be valid JSON")
 	}
 
 	errs := map[string]string{}
@@ -137,15 +137,15 @@ func (h *StudentHandler) ReplaceStudent(c *fiber.Ctx) error {
 	req.Name = strings.TrimSpace(req.Name)
 
 	if req.NIM == "" {
-		errs["nim"] = "wajib diisi pada PUT"
+		errs["nim"] = "is required for PUT"
 	}
 	if req.Name == "" {
-		errs["name"] = "wajib diisi pada PUT"
+		errs["name"] = "is required for PUT"
 	}
 	if req.Grade == nil {
-		errs["grade"] = "wajib diisi pada PUT"
+		errs["grade"] = "is required for PUT"
 	} else if *req.Grade < 0 || *req.Grade > 4.0 {
-		errs["grade"] = "harus di antara 0.0 - 4.0"
+		errs["grade"] = "must be between 0.0 and 4.0"
 	}
 	if len(errs) > 0 {
 		return failValidation(c, errs)
@@ -162,10 +162,10 @@ func (h *StudentHandler) ReplaceStudent(c *fiber.Ctx) error {
 	// Update DB
 	result, err := h.repo.Update(ctx, updated)
 	if err != nil {
-		return translateError(c, err, "gagal memperbarui mahasiswa")
+		return translateError(c, err, "failed to update student")
 	}
 
-	return ok(c, "mahasiswa berhasil diganti seluruhnya", result)
+	return ok(c, "student successfully replaced", result)
 }
 
 // 6. PATCH (Update Partial)
@@ -174,22 +174,22 @@ func (h *StudentHandler) PatchStudent(c *fiber.Ctx) error {
 	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
-		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
+		return fail(c, fiber.StatusBadRequest, "id must be a positive number")
 	}
 
 	var req model.PatchStudentRequest
 	if err := c.BodyParser(&req); err != nil {
-		return fail(c, fiber.StatusBadRequest, "body harus berupa JSON yang valid")
+		return fail(c, fiber.StatusBadRequest, "body must be valid JSON")
 	}
 
 	if req.NIM == nil && req.Name == nil && req.Grade == nil && req.IsActive == nil {
-		return fail(c, fiber.StatusBadRequest, "tidak ada field yang diubah")
+		return fail(c, fiber.StatusBadRequest, "no fields to update")
 	}
 
 	// 1. Fetch current data to preserve unchanged fields
 	s, err := h.repo.FindByID(ctx, id)
 	if err != nil {
-		return translateError(c, err, "gagal mencari mahasiswa")
+		return translateError(c, err, "failed to find student")
 	}
 
 	// 2. Validate and map new fields
@@ -197,20 +197,20 @@ func (h *StudentHandler) PatchStudent(c *fiber.Ctx) error {
 	if req.NIM != nil {
 		nimVal := strings.TrimSpace(*req.NIM)
 		if nimVal == "" {
-			errs["nim"] = "tidak boleh kosong"
+			errs["nim"] = "cannot be empty"
 		}
 		s.NIM = nimVal
 	}
 	if req.Name != nil {
 		nameVal := strings.TrimSpace(*req.Name)
 		if nameVal == "" {
-			errs["name"] = "tidak boleh kosong"
+			errs["name"] = "cannot be empty"
 		}
 		s.Name = nameVal
 	}
 	if req.Grade != nil {
 		if *req.Grade < 0 || *req.Grade > 4.0 {
-			errs["grade"] = "harus di antara 0.0 - 4.0"
+			errs["grade"] = "must be between 0.0 and 4.0"
 		}
 		s.Grade = *req.Grade
 	}
@@ -225,10 +225,10 @@ func (h *StudentHandler) PatchStudent(c *fiber.Ctx) error {
 	// 3. Update DB
 	result, err := h.repo.Update(ctx, s)
 	if err != nil {
-		return translateError(c, err, "gagal memperbarui mahasiswa")
+		return translateError(c, err, "failed to update student")
 	}
 
-	return ok(c, "mahasiswa berhasil diperbarui sebagian", result)
+	return ok(c, "student successfully partially updated", result)
 }
 
 // 7. DELETE
@@ -237,12 +237,12 @@ func (h *StudentHandler) DeleteStudent(c *fiber.Ctx) error {
 	defer cancel()
 	id, valid := paramID(c)
 	if !valid {
-		return fail(c, fiber.StatusBadRequest, "id harus berupa angka positif")
+		return fail(c, fiber.StatusBadRequest, "id must be a positive number")
 	}
 
 	err := h.repo.Delete(ctx, id)
 	if err != nil {
-		return translateError(c, err, "gagal menghapus mahasiswa")
+		return translateError(c, err, "failed to delete student")
 	}
 
 	return noContent(c)

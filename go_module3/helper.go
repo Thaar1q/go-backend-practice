@@ -41,7 +41,7 @@ func fail(c *fiber.Ctx, status int, message string) error {
 
 func failValidation(c *fiber.Ctx, errs map[string]string) error {
 	return c.Status(fiber.StatusUnprocessableEntity).JSON(model.WebResponse{
-		Success: false, Message: "validasi gagal", Errors: errs,
+		Success: false, Message: "validation failed", Errors: errs,
 	})
 }
 

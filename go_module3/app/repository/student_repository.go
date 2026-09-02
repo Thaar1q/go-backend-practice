@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	ErrNotFound  = errors.New("data tidak ditemukan")
-	ErrDuplicate = errors.New("data sudah ada")
+	ErrNotFound  = errors.New("data not found")
+	ErrDuplicate = errors.New("data already exists")
 )
 
 type StudentRepository interface {
@@ -71,7 +71,7 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 	var total int
 	err := r.pool.QueryRow(ctx, "SELECT COUNT(*) FROM students"+where, args...).Scan(&total)
 	if err != nil {
-		return nil, 0, fmt.Errorf("menghitung mahasiswa: %w", err)
+		return nil, 0, fmt.Errorf("count students: %w", err)
 	}
 
 	arah := "ASC"
@@ -92,7 +92,7 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 
 	rows, err := r.pool.Query(ctx, sqlText, args...)
 	if err != nil {
-		return nil, 0, fmt.Errorf("mengambil daftar mahasiswa: %w", err)
+		return nil, 0, fmt.Errorf("fetch student list: %w", err)
 	}
 	defer rows.Close()
 
@@ -100,12 +100,12 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 	for rows.Next() {
 		var s model.Student
 		if err := rows.Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt); err != nil {
-			return nil, 0, fmt.Errorf("membaca baris mahasiswa: %w", err)
+			return nil, 0, fmt.Errorf("read student row: %w", err)
 		}
 		hasil = append(hasil, s)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, 0, fmt.Errorf("membaca hasil query: %w", err)
+		return nil, 0, fmt.Errorf("read query result: %w", err)
 	}
 
 	return hasil, total, nil
@@ -123,7 +123,7 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.Student{}, ErrNotFound
 		}
-		return model.Student{}, fmt.Errorf("mengambil mahasiswa: %w", err)
+		return model.Student{}, fmt.Errorf("fetch student: %w", err)
 	}
 
 	return s, nil
@@ -141,7 +141,7 @@ func (r *studentPostgresRepository) Create(ctx context.Context, s model.Student)
 		if isUniqueViolation(err) {
 			return model.Student{}, ErrDuplicate
 		}
-		return model.Student{}, fmt.Errorf("menyimpan mahasiswa: %w", err)
+		return model.Student{}, fmt.Errorf("save student: %w", err)
 	}
 
 	return s, nil
@@ -162,7 +162,7 @@ func (r *studentPostgresRepository) Update(ctx context.Context, s model.Student)
 		if isUniqueViolation(err) {
 			return model.Student{}, ErrDuplicate
 		}
-		return model.Student{}, fmt.Errorf("memperbarui mahasiswa: %w", err)
+		return model.Student{}, fmt.Errorf("update student: %w", err)
 	}
 
 	return s, nil
@@ -171,7 +171,7 @@ func (r *studentPostgresRepository) Update(ctx context.Context, s model.Student)
 func (r *studentPostgresRepository) Delete(ctx context.Context, id int) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM students WHERE id = $1`, id)
 	if err != nil {
-		return fmt.Errorf("menghapus mahasiswa: %w", err)
+		return fmt.Errorf("delete student: %w", err)
 	}
 
 	if tag.RowsAffected() == 0 {

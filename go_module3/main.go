@@ -79,7 +79,7 @@ func main() {
 		if err := pool.Ping(c.UserContext()); err != nil {
 			return fail(c, fiber.StatusServiceUnavailable, "database down")
 		}
-		return ok(c, "server berjalan", fiber.Map{"timestamp": time.Now()})
+		return ok(c, "server is running", fiber.Map{"timestamp": time.Now()})
 	})
 
 	u := api.Group("/students", requireJSON)
@@ -91,9 +91,9 @@ func main() {
 	u.Delete("/:id", StudentHandler.DeleteStudent)
 
 	app.Use(func(c *fiber.Ctx) error {
-		return fail(c, fiber.StatusNotFound, "endpoint tidak ditemukan")
+		return fail(c, fiber.StatusNotFound, "endpoint not found")
 	})
 
-	fmt.Println("Server berjalan di http://localhost:3000")
+	fmt.Println("Server running at http://localhost:3000")
 	log.Fatal(app.Listen(":3000"))
 }
