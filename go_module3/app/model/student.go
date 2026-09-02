@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// 1. Base Entity
 type Student struct {
 	ID        int       `json:"id"`
 	NIM       string    `json:"nim"`
@@ -11,6 +12,7 @@ type Student struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
+// 2. Request Payloads
 // POST
 type CreateStudentRequest struct {
 	NIM      string  `json:"nim"`
@@ -35,6 +37,7 @@ type PatchStudentRequest struct {
 	IsActive *bool    `json:"is_active,omitempty"`
 }
 
+// 3. Response Structure
 // RESPONSE TEMPLATE
 type WebResponse struct {
 	Success bool   `json:"success"`
@@ -44,6 +47,7 @@ type WebResponse struct {
 	Errors  any    `json:"errors,omitempty"`
 }
 
+// 4. Query & Metadata
 type Meta struct {
 	Page       int `json:"page"`
 	Limit      int `json:"limit"`

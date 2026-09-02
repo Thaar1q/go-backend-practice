@@ -49,6 +49,7 @@ func main() {
 	StudentRepository := repository.NewStudentRepository(pool)
 	StudentHandler := NewStudentHandler(StudentRepository)
 
+	// 4. Fiber App Initialization
 	app := fiber.New(fiber.Config{
 		AppName: "Praktikum Backend Lanjut - Pertemuan 3",
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -62,13 +63,14 @@ func main() {
 		},
 	})
 
-	// Global middleware
+	// 5. Global Middleware
 	app.Use(requestid.New())
 	app.Use(logger.New(logger.Config{
 		Format: "[${time}] ${locals:requestid} ${method} ${path} ${status} ${latency}\n",
 	}))
 	app.Use(cors.New())
 
+	// 6. Routes Setup
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
@@ -94,6 +96,7 @@ func main() {
 		return fail(c, fiber.StatusNotFound, "endpoint not found")
 	})
 
+	// 7. Start Server
 	fmt.Println("Server running at http://localhost:3000")
 	log.Fatal(app.Listen(":3000"))
 }

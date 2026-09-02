@@ -17,6 +17,7 @@ var (
 	ErrDuplicate = errors.New("data already exists")
 )
 
+// 1. Interface & Structs
 type StudentRepository interface {
 	FindAll(ctx context.Context, q model.ListQuery) ([]model.Student, int, error)
 	FindByID(ctx context.Context, id int) (model.Student, error)
@@ -39,10 +40,12 @@ type studentPostgresRepository struct {
 	pool *pgxpool.Pool
 }
 
+// 2. Constructor
 func NewStudentRepository(pool *pgxpool.Pool) StudentRepository {
 	return &studentPostgresRepository{pool: pool}
 }
 
+// 3. Query Builder Helper
 func buildFilter(q model.ListQuery) (string, []any) {
 	where := " WHERE 1 = 1"
 	args := []any{}
@@ -65,6 +68,7 @@ func buildFilter(q model.ListQuery) (string, []any) {
 	return where, args
 }
 
+// 4. Find All (List)
 func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQuery) ([]model.Student, int, error) {
 	where, args := buildFilter(q)
 
@@ -111,6 +115,7 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 	return hasil, total, nil
 }
 
+// 5. Find By ID (Get One)
 func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model.Student, error) {
 	var s model.Student
 
@@ -129,6 +134,7 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 	return s, nil
 }
 
+// 6. Create (Insert)
 func (r *studentPostgresRepository) Create(ctx context.Context, s model.Student) (model.Student, error) {
 	err := r.pool.QueryRow(ctx,
 		`INSERT INTO students (nim, name, grade, is_active)
@@ -147,6 +153,7 @@ func (r *studentPostgresRepository) Create(ctx context.Context, s model.Student)
 	return s, nil
 }
 
+// 7. Update (Replace/Patch)
 func (r *studentPostgresRepository) Update(ctx context.Context, s model.Student) (model.Student, error) {
 	err := r.pool.QueryRow(ctx,
 		`UPDATE students SET nim = $1, name = $2, grade = $3, is_active = $4
@@ -168,6 +175,7 @@ func (r *studentPostgresRepository) Update(ctx context.Context, s model.Student)
 	return s, nil
 }
 
+// 8. Delete
 func (r *studentPostgresRepository) Delete(ctx context.Context, id int) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM students WHERE id = $1`, id)
 	if err != nil {
@@ -181,6 +189,7 @@ func (r *studentPostgresRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
+// 9. Error Check Helper
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {

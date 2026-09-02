@@ -11,7 +11,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 )
 
-// RESPONSE
+// 1. Response Wrappers
 func ok(c *fiber.Ctx, message string, data any) error {
 	return c.Status(fiber.StatusOK).JSON(model.WebResponse{
 		Success: true, Message: message, Data: data,
@@ -45,7 +45,7 @@ func failValidation(c *fiber.Ctx, errs map[string]string) error {
 	})
 }
 
-// QUERY
+// 2. Query Parser
 var allowedSort = map[string]bool{
 	"id": true, "name": true, "nim": true, "grade": true, "is_active": true, "created_at": true,
 }
@@ -89,6 +89,7 @@ func parseListQuery(c *fiber.Ctx) model.ListQuery {
 	return q
 }
 
+// 3. Context Helper
 func reqCtx(c *fiber.Ctx) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(c.UserContext(), 5*time.Second)
 }
