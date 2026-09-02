@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"strconv"
 	"strings"
+	"time"
 
 	"go_module3/app/model"
 
@@ -45,7 +47,7 @@ func failValidation(c *fiber.Ctx, errs map[string]string) error {
 
 // QUERY
 var allowedSort = map[string]bool{
-	"id": true, "username": true, "email": true, "created_at": true,
+	"id": true, "name": true, "nim": true, "grade": true, "is_active": true, "created_at": true,
 }
 
 func parseListQuery(c *fiber.Ctx) model.ListQuery {
@@ -85,4 +87,8 @@ func parseListQuery(c *fiber.Ctx) model.ListQuery {
 	}
 
 	return q
+}
+
+func reqCtx(c *fiber.Ctx) (context.Context, context.CancelFunc) {
+	return context.WithTimeout(c.UserContext(), 5*time.Second)
 }
