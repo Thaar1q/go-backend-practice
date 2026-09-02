@@ -35,7 +35,7 @@ Ongoing project about learning Go Language.
 * PostgreSQL (version 14 or newer)
 * curl / Postman
 
-##### Database Setup (Module 3)
+##### Database Setup
 1. Ensure the PostgreSQL service is active and accessible.
 2. Create the target database (e.g., go_backend_practice):
    CREATE DATABASE go_backend_practice;
@@ -43,6 +43,7 @@ Ongoing project about learning Go Language.
    psql -U postgres -d go_backend_practice -f migrations/001_create_students.sql
 
 ##### Database Schema
+```
 CREATE TABLE IF NOT EXISTS students (
     id         SERIAL PRIMARY KEY,
     nim        VARCHAR(50) NOT NULL UNIQUE,
@@ -55,6 +56,7 @@ CREATE TABLE IF NOT EXISTS students (
 CREATE INDEX IF NOT EXISTS idx_students_name_lower ON students (LOWER(name));
 CREATE UNIQUE INDEX IF NOT EXISTS idx_students_nim_unique ON students (LOWER(nim));
 CREATE INDEX IF NOT EXISTS idx_students_is_active ON students (is_active);
+```
 
 ##### Environment Configuration
 Create a .env file in the root of the Module 3 project by copying .env.example:
@@ -94,7 +96,7 @@ DB_MAX_CONNS=10
 
 ---
 
-#### API Contract (Module 2 & 3)
+#### API Contract
 Base URL: http://localhost:3000/api/v1/students
 
 | Method | Endpoint | Query / Path Parameters | Request Body (JSON) | Possible Statuses | Response Body Example |
