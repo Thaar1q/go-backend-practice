@@ -57,6 +57,11 @@ func buildFilter(q model.ListQuery) (string, []any) {
 		args = append(args, *q.IsActive)
 	}
 
+	if q.MinGrade != nil {
+		where += fmt.Sprintf(" AND grade >= $%d", len(args)+1)
+		args = append(args, *q.MinGrade)
+	}
+
 	return where, args
 }
 
