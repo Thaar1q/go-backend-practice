@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"strings"
@@ -10,6 +11,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
+
+	"go_module3/app/repository"
+	"go_module3/config"
+	"go_module3/database"
 )
 
 var methodsWithBody = map[string]bool{
@@ -30,8 +35,22 @@ func requireJSON(c *fiber.Ctx) error {
 }
 
 func main() {
+	// 1. Config
+	config.LoadEnv()
+
+	// 2. Load Database
+	pool, err := database.NewPool(context.Background())
+	if err != nil {
+		log.Fatalf("database: %v", err)
+	}
+	defer pool.Close()
+
+	// 3. pool -> repository -> handler
+	StudentRepository := repository.NewStudentRepository(pool)
+	StudentHandler := NewStudentHandler(StudentRepository)
+
 	app := fiber.New(fiber.Config{
-		AppName: "Praktikum Backend Lanjut - Pertemuan 2",
+		AppName: "Praktikum Backend Lanjut - Pertemuan 3",
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			status := fiber.StatusInternalServerError
 			pesan := "500 Internal Server Error"
@@ -61,12 +80,12 @@ func main() {
 	})
 
 	u := api.Group("/students", requireJSON)
-	u.Get("/", listStudents)
-	u.Get("/:id", getStudent)
-	u.Post("/", createStudent)
-	u.Put("/:id", replaceStudent)
-	u.Patch("/:id", patchStudent)
-	u.Delete("/:id", deleteStudent)
+	u.Get("/", StudentHandler.ListStudents)
+	u.Get("/:id", StudentHandler.GetStudent)
+	u.Post("/", StudentHandler.CreateStudent)
+	u.Put("/:id", StudentHandler.ReplaceStudent)
+	u.Patch("/:id", StudentHandler.PatchStudent)
+	u.Delete("/:id", StudentHandler.DeleteStudent)
 
 	app.Use(func(c *fiber.Ctx) error {
 		return fail(c, fiber.StatusNotFound, "endpoint tidak ditemukan")
