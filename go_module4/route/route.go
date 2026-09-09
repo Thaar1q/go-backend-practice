@@ -29,9 +29,6 @@ func Register(app *fiber.App, pool *pgxpool.Pool, studentService *service.Studen
 	students.Patch("/:id", studentService.PatchStudent)
 	students.Delete("/:id", studentService.DeleteStudent)
 
-	app.Use(func(c *fiber.Ctx) error {
-		return helper.Fail(c, fiber.StatusNotFound, "endpoint not found")
-	})
 }
 
 func healthCheck(pool *pgxpool.Pool) fiber.Handler {
