@@ -26,12 +26,12 @@ Ongoing project about learning Go Language.
 * Sentinel error translation from database errors to HTTP status codes
 
 ##### Module 4
-* Clean Architecture layer separation (Entities, Use Cases, Interface Adapters, Frameworks & Drivers)[cite: 8]
-* Pure business rules and validation decoupled from HTTP frameworks[cite: 8]
-* Independent unit testing of business rules without mock servers or databases[cite: 8]
-* Structured JSON logging with file rotation (log/slog and lumberjack.v2)[cite: 8]
-* Global security middleware, panic recovery, and scoped request validation[cite: 8]
-* Centralized dependency injection, composition root assembly, and graceful shutdown[cite: 8]
+* Clean Architecture layer separation (Entities, Use Cases, Interface Adapters, Frameworks & Drivers)
+* Pure business rules and validation decoupled from HTTP frameworks
+* Independent unit testing of business rules without mock servers or databases
+* Structured JSON logging with file rotation (log/slog and lumberjack.v2)
+* Global security middleware, panic recovery, and scoped request validation
+* Centralized dependency injection, composition root assembly, and graceful shutdown
 
 ---
 
@@ -143,10 +143,10 @@ Base URL: http://localhost:3000/api/v1/students
 ---
 
 #### References Used
-* https://youtu.be/8uiZC0l4Ajw[cite: 2]
-* https://docs.gofiber.io/[cite: 2]
-* https://pkg.go.dev/github.com/jackc/pgx/v5[cite: 2]
-* https://www.postgresql.org/docs/[cite: 2]
-* https://developer.mozilla.org/en-US/docs/Web/HTTP[cite: 2]
+* https://youtu.be/8uiZC0l4Ajw
+* https://docs.gofiber.io/
+* https://pkg.go.dev/github.com/jackc/pgx/v5
+* https://www.postgresql.org/docs/
+* https://developer.mozilla.org/en-US/docs/Web/HTTP
 * https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
 * https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2
