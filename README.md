@@ -25,6 +25,14 @@ Ongoing project about learning Go Language.
 * Environment variable configuration (.env and .env.example)
 * Sentinel error translation from database errors to HTTP status codes
 
+##### Module 4
+* Clean Architecture layer separation (Entities, Use Cases, Interface Adapters, Frameworks & Drivers)[cite: 8]
+* Pure business rules and validation decoupled from HTTP frameworks[cite: 8]
+* Independent unit testing of business rules without mock servers or databases[cite: 8]
+* Structured JSON logging with file rotation (log/slog and lumberjack.v2)[cite: 8]
+* Global security middleware, panic recovery, and scoped request validation[cite: 8]
+* Centralized dependency injection, composition root assembly, and graceful shutdown[cite: 8]
+
 ---
 
 #### How to Initialize
@@ -108,6 +116,16 @@ DB_MAX_CONNS=10
      go run .
      ```
 
+   * Module 4:
+     ```
+     cd go_module4
+     go run .
+     ```
+4. Run Unit Tests (Module 4):
+   ```
+   cd go_module4
+   go test -v ./app/service/...
+   ```
 ---
 
 #### API Contract
@@ -115,20 +133,20 @@ Base URL: http://localhost:3000/api/v1/students
 
 | Method | Endpoint | Query / Path Parameters | Request Body (JSON) | Possible Statuses | Response Body Example |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| GET | /api/v1/students | page (int, default 1)<br>limit (int, default 10, max 100)<br>search (string, case-insensitive)<br>sort (id, nim, name, grade)<br>order (asc, desc)<br>is_active (bool) | (None) | 200 OK | {"success": true, "message": "daftar mahasiswa berhasil diambil", "data": [...], "meta": {"page": 1, "limit": 10, "total": 1, "total_pages": 1}} |
-| GET | /api/v1/students/:id | :id (int, path) | (None) | 200 OK<br>400 Bad Request<br>404 Not Found | {"success": true, "message": "mahasiswa ditemukan", "data": {"id": 1, "nim": "000000001", "name": "mahasiswaAA", "grade": 3.75, "is_active": true, "created_at": "..."}} |
-| POST | /api/v1/students | (None) | {"nim": "000000001", "name": "mahasiswaAA", "grade": 3.75} | 201 Created<br>400 Bad Request<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | {"success": true, "message": "mahasiswa berhasil dibuat", "data": {...}}<br>Header: Location: /api/v1/students/1 |
-| PUT | /api/v1/students/:id | :id (int, path) | {"nim": "000000001", "name": "mahasiswaAA_baru", "grade": 3.80, "is_active": false} (All fields mandatory) | 200 OK<br>400 Bad Request<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | {"success": true, "message": "mahasiswa berhasil diganti seluruhnya", "data": {...}} |
-| PATCH | /api/v1/students/:id | :id (int, path) | {"grade": 3.90} (Only modified fields required) | 200 OK<br>400 Bad Request<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | {"success": true, "message": "mahasiswa berhasil diperbarui sebagian", "data": {...}} |
+| GET | /api/v1/students | page (int, default 1)<br>limit (int, default 10, max 100)<br>search (string)<br>sort (id, nim, name, grade)<br>order (asc, desc)<br>is_active (bool)<br>min_grade (float) | (None) | 200 OK | {"success": true, "message": "student list successfully retrieved", "data": [...], "meta": {"page": 1, "limit": 10, "total": 1, "total_pages": 1}} |
+| GET | /api/v1/students/:id | :id (int, path) | (None) | 200 OK<br>400 Bad Request<br>404 Not Found | {"success": true, "message": "student found", "data": {"id": 1, "nim": "000000001", "name": "mahasiswaAA", "grade": 3.75, "is_active": true, "created_at": "..."}} |
+| POST | /api/v1/students | (None) | {"nim": "000000001", "name": "mahasiswaAA", "grade": 3.75} | 201 Created<br>400 Bad Request<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | {"success": true, "message": "student successfully created", "data": {...}}<br>Header: Location: /api/v1/students/1 |
+| PUT | /api/v1/students/:id | :id (int, path) | {"nim": "000000001", "name": "mahasiswaAA_baru", "grade": 3.80, "is_active": false} (All fields mandatory) | 200 OK<br>400 Bad Request<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | {"success": true, "message": "student successfully replaced", "data": {...}} |
+| PATCH | /api/v1/students/:id | :id (int, path) | {"grade": 3.90} (Only modified fields required) | 200 OK<br>400 Bad Request<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | {"success": true, "message": "student successfully partially updated", "data": {...}} |
 | DELETE | /api/v1/students/:id | :id (int, path) | (None) | 204 No Content<br>400 Bad Request<br>404 Not Found | (Empty Body) |
 
 ---
 
 #### References Used
-* https://www.youtube.com/watch?v=8uiZC0l4Ajw
-* https://docs.gofiber.io/
-* https://pkg.go.dev/github.com/jackc/pgx/v5
-* https://www.postgresql.org/docs/
-* https://developer.mozilla.org/en-US/docs/Web/HTTP
-
-```
+* https://youtu.be/8uiZC0l4Ajw[cite: 2]
+* https://docs.gofiber.io/[cite: 2]
+* https://pkg.go.dev/github.com/jackc/pgx/v5[cite: 2]
+* https://www.postgresql.org/docs/[cite: 2]
+* https://developer.mozilla.org/en-US/docs/Web/HTTP[cite: 2]
+* https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html
+* https://pkg.go.dev/gopkg.in/natefinch/lumberjack.v2
