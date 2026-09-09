@@ -15,7 +15,7 @@ func ReqCtx(c *fiber.Ctx) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(c.UserContext(), 5*time.Second)
 }
 
-func paramID(c *fiber.Ctx) (int, bool) {
+func ParamID(c *fiber.Ctx) (int, bool) {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil || id < 1 {
 		return 0, false
