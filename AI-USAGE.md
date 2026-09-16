@@ -44,6 +44,14 @@ AI tools were used for the following areas:
   - Assisted in troubleshooting Windows PowerShell formatting issues, CLI escaping, and dynamic test automation scripts.
   - Formatted the layer boundary compliance audit table and ASCII dependency diagram for documentation.
 
+- **Module 5 (Authentication & Security):**
+  - Formatted SQL migration schemas for password hashing persistence and indexed token storage (`refresh_tokens`).
+  - Advised on cryptographic hashing parameters using `bcrypt` (cost 12) and implementing constant-time dummy verification routines to defeat user enumeration and timing attacks.
+  - Outlined the token lifecycle structure (HMAC-SHA256 JWT access tokens paired with SHA-256 hashed single-use refresh tokens in PostgreSQL).
+  - Designed the `RequireAuth` bearer middleware pattern and context-binding routines (`c.Locals`).
+  - Debugged DTO deserialization binding issues (`LoginRequest` tag mapping for NIM vs. Username) causing 401 Unauthorized failures during automated testing.
+  - Suggested conventional commit messages and outlined the compliance test matrix for rate limiting (429) and route authorization.
+
 ## 3. Human Oversight & Verification
 
 - **Code Review:** All generated code, structural patterns, and helper functions were reviewed, adapted, and tested manually.
