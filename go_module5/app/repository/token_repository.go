@@ -28,12 +28,12 @@ func NewTokenRepository(pool *pgxpool.Pool) TokenRepository {
 
 func (r *tokenPostgresRepository) Save(ctx context.Context, t model.RefreshToken) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO refresh_tokens (user_id, token_hash, expires_at)
+		`INSERT INTO refresh_tokens (student_id, token_hash, expires_at)
          VALUES ($1, $2, $3)`,
 		t.UserID, t.TokenHash, t.ExpiresAt,
 	)
 	if err != nil {
-		return fmt.Errorf("menyimpan refresh token: %w", err)
+		return fmt.Errorf("save refresh token: %w", err)
 	}
 	return nil
 }
@@ -42,7 +42,7 @@ func (r *tokenPostgresRepository) FindActive(ctx context.Context, tokenHash stri
 	var t model.RefreshToken
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, user_id, token_hash, expires_at, revoked_at, created_at
+		`SELECT id, student_id, token_hash, expires_at, revoked_at, created_at
          FROM refresh_tokens
          WHERE token_hash = $1
            AND revoked_at IS NULL
@@ -53,7 +53,7 @@ func (r *tokenPostgresRepository) FindActive(ctx context.Context, tokenHash stri
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.RefreshToken{}, ErrNotFound
 		}
-		return model.RefreshToken{}, fmt.Errorf("mengambil refresh token: %w", err)
+		return model.RefreshToken{}, fmt.Errorf("fetch refresh token: %w", err)
 	}
 
 	return t, nil
@@ -65,7 +65,7 @@ func (r *tokenPostgresRepository) Revoke(ctx context.Context, tokenHash string) 
          WHERE token_hash = $1 AND revoked_at IS NULL`, tokenHash,
 	)
 	if err != nil {
-		return fmt.Errorf("mencabut refresh token: %w", err)
+		return fmt.Errorf("revoke refresh token: %w", err)
 	}
 	return nil
 }
@@ -73,10 +73,10 @@ func (r *tokenPostgresRepository) Revoke(ctx context.Context, tokenHash string) 
 func (r *tokenPostgresRepository) RevokeAllForUser(ctx context.Context, userID int) error {
 	_, err := r.pool.Exec(ctx,
 		`UPDATE refresh_tokens SET revoked_at = NOW()
-         WHERE user_id = $1 AND revoked_at IS NULL`, userID,
+         WHERE student_id = $1 AND revoked_at IS NULL`, userID,
 	)
 	if err != nil {
-		return fmt.Errorf("mencabut seluruh refresh token user: %w", err)
+		return fmt.Errorf("revoke all refresh tokens for user: %w", err)
 	}
 	return nil
 }
