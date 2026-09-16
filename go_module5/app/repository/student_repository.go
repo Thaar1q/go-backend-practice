@@ -21,6 +21,7 @@ var (
 type StudentRepository interface {
 	FindAll(ctx context.Context, q model.ListQuery) ([]model.Student, int, error)
 	FindByID(ctx context.Context, id int) (model.Student, error)
+	FindByUsername(ctx context.Context, username string) (model.Student, error)
 	Create(ctx context.Context, s model.Student) (model.Student, error)
 	Update(ctx context.Context, s model.Student) (model.Student, error)
 	Delete(ctx context.Context, id int) error
@@ -32,6 +33,7 @@ var kolomUrut = map[string]string{
 	"nim":        "nim",
 	"name":       "name",
 	"grade":      "grade",
+	"role":       "role",
 	"is_active":  "is_active",
 	"created_at": "created_at",
 }
@@ -84,7 +86,7 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 	}
 
 	sqlText := fmt.Sprintf(
-		`SELECT id, nim, name, grade, is_active, created_at
+		`SELECT id, nim, name, grade, password, role, is_active, created_at
          FROM students%s
          ORDER BY %s %s
          LIMIT $%d OFFSET $%d`,
@@ -103,7 +105,7 @@ func (r *studentPostgresRepository) FindAll(ctx context.Context, q model.ListQue
 	hasil := []model.Student{}
 	for rows.Next() {
 		var s model.Student
-		if err := rows.Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.Password, &s.Role, &s.IsActive, &s.CreatedAt); err != nil {
 			return nil, 0, fmt.Errorf("read student row: %w", err)
 		}
 		hasil = append(hasil, s)
@@ -120,9 +122,9 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 	var s model.Student
 
 	err := r.pool.QueryRow(ctx,
-		`SELECT id, nim, name, grade, is_active, created_at
+		`SELECT id, nim, name, grade, password, role, is_active, created_at
          FROM students WHERE id = $1`, id,
-	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
+	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.Password, &s.Role, &s.IsActive, &s.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -134,7 +136,26 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 	return s, nil
 }
 
-// 6. Create (Insert)
+// 6. Find by Username
+func (r *studentPostgresRepository) FindByUsername(ctx context.Context, username string) (model.Student, error) {
+	var s model.Student
+
+	err := r.pool.QueryRow(ctx,
+		`SELECT id, nim, name, grade, password, role, is_active, created_at
+         FROM student WHERE LOWER(name) = LOWER($1)`, username,
+	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.Password, &s.Role, &s.IsActive, &s.CreatedAt)
+
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.Student{}, ErrNotFound
+		}
+		return model.Student{}, fmt.Errorf("mengambil user: %w", err)
+	}
+
+	return s, nil
+}
+
+// 7. Create (Insert)
 func (r *studentPostgresRepository) Create(ctx context.Context, s model.Student) (model.Student, error) {
 	err := r.pool.QueryRow(ctx,
 		`INSERT INTO students (nim, name, grade, is_active)
@@ -153,14 +174,14 @@ func (r *studentPostgresRepository) Create(ctx context.Context, s model.Student)
 	return s, nil
 }
 
-// 7. Update (Replace/Patch)
+// 8. Update (Replace/Patch)
 func (r *studentPostgresRepository) Update(ctx context.Context, s model.Student) (model.Student, error) {
 	err := r.pool.QueryRow(ctx,
 		`UPDATE students SET nim = $1, name = $2, grade = $3, is_active = $4
          WHERE id = $5
          RETURNING id, nim, name, grade, is_active, created_at`,
 		s.NIM, s.Name, s.Grade, s.IsActive, s.ID,
-	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.IsActive, &s.CreatedAt)
+	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.Password, &s.Role, &s.IsActive, &s.CreatedAt)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -175,7 +196,7 @@ func (r *studentPostgresRepository) Update(ctx context.Context, s model.Student)
 	return s, nil
 }
 
-// 8. Delete
+// 9. Delete
 func (r *studentPostgresRepository) Delete(ctx context.Context, id int) error {
 	tag, err := r.pool.Exec(ctx, `DELETE FROM students WHERE id = $1`, id)
 	if err != nil {
@@ -189,7 +210,7 @@ func (r *studentPostgresRepository) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-// 9. Error Check Helper
+// 10. Error Check Helper
 func isUniqueViolation(err error) bool {
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) {
