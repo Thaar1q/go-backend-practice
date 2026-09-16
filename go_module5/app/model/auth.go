@@ -11,7 +11,15 @@ type RegisterRequest struct {
 
 type LoginRequest struct {
 	NIM      string `json:"nim"`
+	Username string `json:"username"`
 	Password string `json:"password"`
+}
+
+func (l *LoginRequest) GetIdentifier() string {
+	if l.NIM != "" {
+		return l.NIM
+	}
+	return l.Username
 }
 
 type RefreshRequest struct {
