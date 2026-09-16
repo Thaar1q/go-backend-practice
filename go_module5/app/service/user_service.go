@@ -1,0 +1,196 @@
+package service
+
+import (
+	"errors"
+	"strconv"
+	"strings"
+
+	"go_module5/app/model"
+	"go_module5/app/repository"
+	"go_module5/helper"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+// 1. Handler Struct & Constructor
+type StudentService struct {
+	repo repository.StudentRepository
+}
+
+func NewStudentService(repo repository.StudentRepository) *StudentService {
+	return &StudentService{repo: repo}
+}
+
+func translateError(c *fiber.Ctx, err error, pesanUmum string) error {
+	switch {
+	case errors.Is(err, repository.ErrNotFound):
+		return helper.Fail(c, fiber.StatusNotFound, "student not found")
+	case errors.Is(err, repository.ErrDuplicate):
+		return helper.Fail(c, fiber.StatusConflict, "NIM already registered")
+	default:
+		return helper.Fail(c, fiber.StatusInternalServerError, pesanUmum)
+	}
+}
+
+// 2. GET ALL (list)
+func (h *StudentService) ListStudents(c *fiber.Ctx) error {
+	ctx, cancel := helper.ReqCtx(c)
+	defer cancel()
+	q := helper.ParseListQuery(c)
+
+	// Fetch from DB
+	result, total, err := h.repo.FindAll(ctx, q)
+	if err != nil {
+		return helper.Fail(c, fiber.StatusInternalServerError, "failed to fetch student list")
+	}
+
+	totalPages := CountTotalPages(total, q.Limit)
+
+	return helper.SuccessList(c, "student list successfully retrieved", result, &model.Meta{
+		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
+	})
+}
+
+// 3. GET ONE
+func (h *StudentService) GetStudent(c *fiber.Ctx) error {
+	ctx, cancel := helper.ReqCtx(c)
+	defer cancel()
+	id, valid := helper.ParamID(c)
+	if !valid {
+		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	s, err := h.repo.FindByID(ctx, id)
+	if err != nil {
+		return translateError(c, err, "failed to find student")
+	}
+
+	return helper.Success(c, "student found", s)
+}
+
+// 4. POST (Create)
+func (h *StudentService) CreateStudent(c *fiber.Ctx) error {
+	ctx, cancel := helper.ReqCtx(c)
+	defer cancel()
+
+	var req model.CreateStudentRequest
+	if err := c.BodyParser(&req); err != nil {
+		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+	}
+
+	req.NIM = strings.TrimSpace(req.NIM)
+	req.Name = strings.TrimSpace(req.Name)
+
+	if errs := ValidateCreate(req); len(errs) > 0 {
+		return helper.FailValidation(c, errs)
+	}
+
+	baru := model.Student{
+		NIM:      req.NIM,
+		Name:     req.Name,
+		Grade:    req.Grade,
+		IsActive: true,
+	}
+
+	// Save to DB
+	createdItem, err := h.repo.Create(ctx, baru)
+	if err != nil {
+		return translateError(c, err, "failed to save student")
+	}
+
+	return helper.Created(c, "student successfully created", createdItem, "/api/v1/students/"+strconv.Itoa(createdItem.ID))
+}
+
+// 5. PUT (Replace All)
+func (h *StudentService) ReplaceStudent(c *fiber.Ctx) error {
+	ctx, cancel := helper.ReqCtx(c)
+	defer cancel()
+	id, valid := helper.ParamID(c)
+	if !valid {
+		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	var req model.ReplaceStudentRequest
+	if err := c.BodyParser(&req); err != nil {
+		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+	}
+
+	req.NIM = strings.TrimSpace(req.NIM)
+	req.Name = strings.TrimSpace(req.Name)
+
+	if errs := ValidateReplace(req); len(errs) > 0 {
+		return helper.FailValidation(c, errs)
+	}
+
+	updated := model.Student{
+		ID:       id,
+		NIM:      req.NIM,
+		Name:     req.Name,
+		Grade:    *req.Grade,
+		IsActive: req.IsActive,
+	}
+
+	// Update DB
+	result, err := h.repo.Update(ctx, updated)
+	if err != nil {
+		return translateError(c, err, "failed to update student")
+	}
+
+	return helper.Success(c, "student successfully replaced", result)
+}
+
+// 6. PATCH (Update Partial)
+func (h *StudentService) PatchStudent(c *fiber.Ctx) error {
+	ctx, cancel := helper.ReqCtx(c)
+	defer cancel()
+	id, valid := helper.ParamID(c)
+	if !valid {
+		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	var req model.PatchStudentRequest
+	if err := c.BodyParser(&req); err != nil {
+		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+	}
+
+	if IsEmptyPatch(req) {
+		return helper.Fail(c, fiber.StatusBadRequest, "no fields to update")
+	}
+
+	// 1. Fetch current data to preserve unchanged fields
+	s, err := h.repo.FindByID(ctx, id)
+	if err != nil {
+		return translateError(c, err, "helper.Failed to find student")
+	}
+
+	// 2. Validate and map new fields
+	updated, errs := ApplyPatch(s, req)
+	if len(errs) > 0 {
+		return helper.FailValidation(c, errs)
+	}
+
+	// 3. Update DB
+	result, err := h.repo.Update(ctx, updated)
+	if err != nil {
+		return translateError(c, err, "failed to update student")
+	}
+
+	return helper.Success(c, "student successfully partially updated", result)
+}
+
+// 7. DELETE
+func (h *StudentService) DeleteStudent(c *fiber.Ctx) error {
+	ctx, cancel := helper.ReqCtx(c)
+	defer cancel()
+	id, valid := helper.ParamID(c)
+	if !valid {
+		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	err := h.repo.Delete(ctx, id)
+	if err != nil {
+		return translateError(c, err, "failed to delete student")
+	}
+
+	return helper.NoContent(c)
+}
