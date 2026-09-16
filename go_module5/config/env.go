@@ -29,7 +29,7 @@ func GetEnvInt(key string, fallback int) int {
 
 	parsed, err := strconv.Atoi(value)
 	if err != nil {
-		log.Printf("peringatan: %s bukan angka (%q), memakai bawaan %d", key, value, fallback)
+		log.Printf("warning: %s is not a number (%q), using default %d", key, value, fallback)
 		return fallback
 	}
 	return parsed
