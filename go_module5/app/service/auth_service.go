@@ -86,12 +86,20 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
 	}
 
-	if errs := ValidateLogin(req); len(errs) > 0 {
-		return helper.FailValidation(c, errs)
+	// Support both .NIM or .Username
+	identifier := strings.TrimSpace(req.NIM)
+	if identifier == "" {
+		identifier = strings.TrimSpace(req.Username)
 	}
 
-	// Uses FindByUsername to match identifier (username or NIM)
-	student, err := s.students.FindByUsername(ctx, strings.TrimSpace(req.NIM))
+	if identifier == "" || req.Password == "" {
+		return helper.FailValidation(c, map[string]string{
+			"nim":      "must be filled",
+			"password": "must be filled",
+		})
+	}
+
+	student, err := s.students.FindByUsername(ctx, identifier)
 	if err != nil {
 		helper.VerifyDummyPassword(req.Password)
 		return helper.Fail(c, fiber.StatusUnauthorized, "invalid username or password")
