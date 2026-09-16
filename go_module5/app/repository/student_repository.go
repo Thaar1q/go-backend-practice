@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -139,29 +140,31 @@ func (r *studentPostgresRepository) FindByID(ctx context.Context, id int) (model
 // 6. Find by Username
 func (r *studentPostgresRepository) FindByUsername(ctx context.Context, username string) (model.Student, error) {
 	var s model.Student
-
-	err := r.pool.QueryRow(ctx,
-		`SELECT id, nim, name, grade, password, role, is_active, created_at
-         FROM student WHERE LOWER(name) = LOWER($1)`, username,
-	).Scan(&s.ID, &s.NIM, &s.Name, &s.Grade, &s.Password, &s.Role, &s.IsActive, &s.CreatedAt)
-
+	query := `
+		SELECT id, nim, name, grade, password, role, is_active, created_at
+		FROM students
+		WHERE LOWER(nim) = LOWER($1) OR LOWER(name) = LOWER($1)
+		LIMIT 1;
+	`
+	err := r.pool.QueryRow(ctx, query, strings.TrimSpace(username)).Scan(
+		&s.ID, &s.NIM, &s.Name, &s.Grade, &s.Password, &s.Role, &s.IsActive, &s.CreatedAt,
+	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return model.Student{}, ErrNotFound
 		}
-		return model.Student{}, fmt.Errorf("mengambil user: %w", err)
+		return model.Student{}, err
 	}
-
 	return s, nil
 }
 
 // 7. Create (Insert)
 func (r *studentPostgresRepository) Create(ctx context.Context, s model.Student) (model.Student, error) {
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO students (nim, name, grade, is_active)
-         VALUES ($1, $2, $3, $4)
+		`INSERT INTO students (nim, name, grade, password, role, is_active)
+		 VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING id, created_at`,
-		s.NIM, s.Name, s.Grade, s.IsActive,
+		s.NIM, s.Name, s.Grade, s.Password, s.Role, s.IsActive,
 	).Scan(&s.ID, &s.CreatedAt)
 
 	if err != nil {
