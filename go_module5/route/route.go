@@ -12,23 +12,42 @@ import (
 	"go_module5/middleware"
 )
 
-func Register(app *fiber.App, pool *pgxpool.Pool, studentService *service.StudentService) {
+type Dependencies struct {
+	Pool           *pgxpool.Pool
+	JWT            *helper.JWTManager
+	StudentService *service.StudentService
+	AuthService    *service.AuthService
+}
+
+func Register(app *fiber.App, deps Dependencies) {
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.SendString("Hello, World!")
 	})
 
 	api := app.Group("/api/v1")
 
-	api.Get("/health", healthCheck(pool))
+	// Public
+	api.Get("/health", healthCheck(deps.Pool))
 
-	students := api.Group("/students", middleware.RequireJSON)
-	students.Get("/", studentService.ListStudents)
-	students.Get("/:id", studentService.GetStudent)
-	students.Post("/", studentService.CreateStudent)
-	students.Put("/:id", studentService.ReplaceStudent)
-	students.Patch("/:id", studentService.PatchStudent)
-	students.Delete("/:id", studentService.DeleteStudent)
+	// Auth routes (public / rate-limited)
+	auth := api.Group("/auth", middleware.RequireJSON)
+	auth.Post("/register", deps.AuthService.Register)
+	auth.Post("/login", middleware.LoginRateLimiter(), deps.AuthService.Login)
+	auth.Post("/refresh", deps.AuthService.Refresh)
+	auth.Post("/logout", deps.AuthService.Logout)
+	auth.Get("/me", middleware.RequireAuth(deps.JWT), deps.AuthService.Me)
 
+	// Protected student routes
+	students := api.Group("/students",
+		middleware.RequireJSON,
+		middleware.RequireAuth(deps.JWT),
+	)
+	students.Get("/", deps.StudentService.ListStudents)
+	students.Get("/:id", deps.StudentService.GetStudent)
+	students.Post("/", deps.StudentService.CreateStudent)
+	students.Put("/:id", deps.StudentService.ReplaceStudent)
+	students.Patch("/:id", deps.StudentService.PatchStudent)
+	students.Delete("/:id", deps.StudentService.DeleteStudent)
 }
 
 func healthCheck(pool *pgxpool.Pool) fiber.Handler {

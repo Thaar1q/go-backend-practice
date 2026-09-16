@@ -12,14 +12,25 @@ import (
 	"go_module5/app/service"
 	"go_module5/config"
 	"go_module5/database"
+	"go_module5/helper"
+	"go_module5/route"
 )
+
+const minSecretLength = 32
 
 func main() {
 	// 1. Config
 	config.LoadEnv()
 	logger := config.NewLogger()
 
-	// 2. Load Database
+	jwtSecret := config.GetEnv("JWT_SECRET", "")
+	if len(jwtSecret) < minSecretLength {
+		logger.Error("JWT_SECRET is not set or too short",
+			slog.Int("min_chars", minSecretLength))
+		os.Exit(1)
+	}
+
+	// 2. Database
 	pool, err := database.NewPool(context.Background())
 	if err != nil {
 		logger.Error("failed to connect to database", slog.String("error", err.Error()))
@@ -27,12 +38,33 @@ func main() {
 	}
 	defer pool.Close()
 
-	// 3. pool -> repository -> handler
-	studentRepository := repository.NewStudentRepository(pool)
-	studentService := service.NewStudentService(studentRepository)
+	// 3. Helpers & Managers
+	jwtManager := helper.NewJWTManager(
+		jwtSecret,
+		config.GetEnv("JWT_ISSUER", "praktikum-backend"),
+		time.Duration(config.GetEnvInt("JWT_ACCESS_TTL_MINUTES", 15))*time.Minute,
+	)
 
-	// 4. Fiber App Initialization
-	app := config.NewApp(logger, pool, studentService)
+	// 4. Repositories & Services
+	studentRepo := repository.NewStudentRepository(pool)
+	tokenRepo := repository.NewTokenRepository(pool)
+
+	studentService := service.NewStudentService(studentRepo)
+	authService := service.NewAuthService(
+		studentRepo,
+		tokenRepo,
+		jwtManager,
+		time.Duration(config.GetEnvInt("JWT_REFRESH_TTL_DAYS", 7))*24*time.Hour,
+	)
+
+	// 5. App & Routes
+	app := config.NewApp(logger, route.Dependencies{
+		Pool:           pool,
+		JWT:            jwtManager,
+		StudentService: studentService,
+		AuthService:    authService,
+	})
+
 	port := config.GetEnv("APP_PORT", "3000")
 
 	go func() {
@@ -44,7 +76,7 @@ func main() {
 
 	logger.Info("server running", slog.String("port", port))
 
-	// 5. Graceful Shutdown
+	// 6. Graceful Shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
