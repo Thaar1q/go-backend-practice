@@ -1,0 +1,15 @@
+ALTER TABLE students
+    ADD COLUMN IF NOT EXISTS role VARCHAR(20) NOT NULL DEFAULT 'student',
+    ADD COLUMN IF NOT EXISTS password TEXT NOT NULL DEFAULT '';
+ 
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id         BIGSERIAL   PRIMARY KEY,
+    student_id INTEGER     NOT NULL REFERENCES students(id) ON DELETE CASCADE,
+    token_hash TEXT        NOT NULL UNIQUE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+ 
+CREATE INDEX IF NOT EXISTS idx_refresh_tokens_students_id
+    ON refresh_tokens (student_id);
