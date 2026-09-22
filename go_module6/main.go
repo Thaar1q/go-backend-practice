@@ -48,12 +48,22 @@ func main() {
 	// 4. Repositories & Services
 	studentRepo := repository.NewStudentRepository(pool)
 	tokenRepo := repository.NewTokenRepository(pool)
+	roleRepo := repository.NewRoleRepository(pool)
 
-	studentService := service.NewStudentService(studentRepo)
+	rawPermissions, err := roleRepo.LoadPermissions(context.Background())
+	if err != nil {
+		logger.Error("failed to load permission", slog.String("error", err.Error()))
+		os.Exit(1)
+	}
+	permissions := helper.NewPermissionSet(rawPermissions)
+	logger.Info("permission(s) loaded", slog.Any("roles", permissions.KnownRoles()))
+
+	studentService := service.NewStudentService(studentRepo, permissions)
 	authService := service.NewAuthService(
 		studentRepo,
 		tokenRepo,
 		jwtManager,
+		permissions,
 		time.Duration(config.GetEnvInt("JWT_REFRESH_TTL_DAYS", 7))*24*time.Hour,
 	)
 
