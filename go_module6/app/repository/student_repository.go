@@ -164,7 +164,7 @@ func (r *studentPostgresRepository) Create(ctx context.Context, s model.Student)
 	}
 	err := r.pool.QueryRow(ctx,
 		`INSERT INTO students (nim, name, grade, password, role, is_active, owner_id)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)
+		 VALUES ($1, $2, $3, $4, $5, $6, NULLIF($7, 0))
 		 RETURNING id, created_at`,
 		s.NIM, s.Name, s.Grade, s.Password, s.Role, s.IsActive, s.OwnerID,
 	).Scan(&s.ID, &s.CreatedAt)

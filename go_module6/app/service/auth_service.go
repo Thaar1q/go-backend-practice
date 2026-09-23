@@ -104,11 +104,13 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 
 	student, err := s.students.FindByUsername(ctx, identifier)
 	if err != nil {
+		println("DEBUG LOGIN ERROR 1: user not found:", err.Error())
 		helper.VerifyDummyPassword(req.Password)
 		return helper.Fail(c, fiber.StatusUnauthorized, "invalid username or password")
 	}
 
 	if !helper.VerifyPassword(student.Password, req.Password) {
+		println("DEBUG LOGIN ERROR 2: password mismatch! hash in db is:", student.Password)
 		return helper.Fail(c, fiber.StatusUnauthorized, "invalid username or password")
 	}
 
