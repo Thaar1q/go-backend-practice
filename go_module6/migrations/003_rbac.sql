@@ -20,6 +20,7 @@ INSERT INTO permissions (name, description) VALUES
     ('student:list',       'Melihat daftar seluruh student'),
     ('student:read:any',   'Melihat data student mana pun'),
     ('student:update:any', 'Mengubah data student mana pun'),
+    ('student:create',     'Menambahkan student baru'),
     ('student:delete',     'Menghapus student'),
     ('role:assign',      'Mengubah role milik student lain')
 ON CONFLICT (name) DO NOTHING;
