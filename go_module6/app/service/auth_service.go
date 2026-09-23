@@ -192,7 +192,10 @@ func (s *AuthService) Me(c *fiber.Ctx) error {
 		return helper.Fail(c, fiber.StatusNotFound, "student not found")
 	}
 
-	return helper.Success(c, "profile retrieved successfully", student)
+	return helper.Success(c, "profile retrieved successfully", fiber.Map{
+		"student":     student,
+		"permissions": s.permissions.PermissionsOf(student.Role),
+	})
 }
 
 func (s *AuthService) issueTokenPair(ctx context.Context, student model.Student) (model.TokenPair, error) {
