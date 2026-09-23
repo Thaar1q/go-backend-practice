@@ -62,6 +62,12 @@ func (h *StudentService) ListStudents(c *fiber.Ctx) error {
 func (h *StudentService) GetStudent(c *fiber.Ctx) error {
 	ctx, cancel := helper.ReqCtx(c)
 	defer cancel()
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+	}
+
 	id, valid := helper.ParamID(c)
 	if !valid {
 		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
@@ -72,6 +78,10 @@ func (h *StudentService) GetStudent(c *fiber.Ctx) error {
 		return translateError(c, err, "failed to find student")
 	}
 
+	if !CanAccessStudent(current, s.OwnerID, h.permissions, "student:read:any") {
+		return helper.Fail(c, fiber.StatusForbidden, "not allowed to access others' data")
+	}
+
 	return helper.Success(c, "student found", s)
 }
 
@@ -79,6 +89,11 @@ func (h *StudentService) GetStudent(c *fiber.Ctx) error {
 func (h *StudentService) CreateStudent(c *fiber.Ctx) error {
 	ctx, cancel := helper.ReqCtx(c)
 	defer cancel()
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+	}
 
 	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
@@ -92,15 +107,17 @@ func (h *StudentService) CreateStudent(c *fiber.Ctx) error {
 		return helper.FailValidation(c, errs)
 	}
 
-	baru := model.Student{
+	new := model.Student{
 		NIM:      req.NIM,
 		Name:     req.Name,
 		Grade:    req.Grade,
+		Role:     "student",
 		IsActive: true,
+		OwnerID:  current.UserID,
 	}
 
 	// Save to DB
-	createdItem, err := h.repo.Create(ctx, baru)
+	createdItem, err := h.repo.Create(ctx, new)
 	if err != nil {
 		return translateError(c, err, "failed to save student")
 	}
@@ -112,9 +129,24 @@ func (h *StudentService) CreateStudent(c *fiber.Ctx) error {
 func (h *StudentService) ReplaceStudent(c *fiber.Ctx) error {
 	ctx, cancel := helper.ReqCtx(c)
 	defer cancel()
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+	}
+
 	id, valid := helper.ParamID(c)
 	if !valid {
 		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	s, err := h.repo.FindByID(ctx, id)
+	if err != nil {
+		return translateError(c, err, "failed to find student")
+	}
+
+	if !CanAccessStudent(current, s.OwnerID, h.permissions, "student:update:any") {
+		return helper.Fail(c, fiber.StatusForbidden, "not allowed to update others' data")
 	}
 
 	var req model.ReplaceStudentRequest
@@ -150,9 +182,24 @@ func (h *StudentService) ReplaceStudent(c *fiber.Ctx) error {
 func (h *StudentService) PatchStudent(c *fiber.Ctx) error {
 	ctx, cancel := helper.ReqCtx(c)
 	defer cancel()
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+	}
+
 	id, valid := helper.ParamID(c)
 	if !valid {
 		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	s, err := h.repo.FindByID(ctx, id)
+	if err != nil {
+		return translateError(c, err, "failed to find student")
+	}
+
+	if !CanAccessStudent(current, s.OwnerID, h.permissions, "student:update:any") {
+		return helper.Fail(c, fiber.StatusForbidden, "not allowed to update others' data")
 	}
 
 	var req model.PatchStudentRequest
@@ -164,19 +211,13 @@ func (h *StudentService) PatchStudent(c *fiber.Ctx) error {
 		return helper.Fail(c, fiber.StatusBadRequest, "no fields to update")
 	}
 
-	// 1. Fetch current data to preserve unchanged fields
-	s, err := h.repo.FindByID(ctx, id)
-	if err != nil {
-		return translateError(c, err, "helper.Failed to find student")
-	}
-
-	// 2. Validate and map new fields
+	// 1. Validate and map new fields
 	updated, errs := ApplyPatch(s, req)
 	if len(errs) > 0 {
 		return helper.FailValidation(c, errs)
 	}
 
-	// 3. Update DB
+	// 2. Update DB
 	result, err := h.repo.Update(ctx, updated)
 	if err != nil {
 		return translateError(c, err, "failed to update student")
@@ -185,13 +226,55 @@ func (h *StudentService) PatchStudent(c *fiber.Ctx) error {
 	return helper.Success(c, "student successfully partially updated", result)
 }
 
-// 7. DELETE
-func (h *StudentService) DeleteStudent(c *fiber.Ctx) error {
+// 7. PATCH ROLE
+func (h *StudentService) AssignRole(c *fiber.Ctx) error {
 	ctx, cancel := helper.ReqCtx(c)
 	defer cancel()
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+	}
+
 	id, valid := helper.ParamID(c)
 	if !valid {
 		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	var req model.AssignRoleRequest
+	if err := c.BodyParser(&req); err != nil {
+		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+	}
+
+	if errs := ValidateAssignRole(current, id, req, h.permissions); len(errs) > 0 {
+		return helper.FailValidation(c, errs)
+	}
+
+	result, err := h.repo.UpdateRole(ctx, id, strings.TrimSpace(req.Role))
+	if err != nil {
+		return translateError(c, err, "failed to update student role")
+	}
+
+	return helper.Success(c, "student role successfully updated", result)
+}
+
+// 8. DELETE
+func (h *StudentService) DeleteStudent(c *fiber.Ctx) error {
+	ctx, cancel := helper.ReqCtx(c)
+	defer cancel()
+
+	current, ok := helper.CurrentUser(c)
+	if !ok {
+		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+	}
+
+	id, valid := helper.ParamID(c)
+	if !valid {
+		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+	}
+
+	if current.UserID == id {
+		return helper.Fail(c, fiber.StatusForbidden, "cannot delete own account")
 	}
 
 	err := h.repo.Delete(ctx, id)

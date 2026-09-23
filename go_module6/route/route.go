@@ -15,6 +15,7 @@ import (
 type Dependencies struct {
 	Pool           *pgxpool.Pool
 	JWT            *helper.JWTManager
+	Permissions    *helper.PermissionSet
 	StudentService *service.StudentService
 	AuthService    *service.AuthService
 }
@@ -29,7 +30,7 @@ func Register(app *fiber.App, deps Dependencies) {
 	// Public
 	api.Get("/health", healthCheck(deps.Pool))
 
-	// Auth routes (public / rate-limited)
+	// Auth routes
 	auth := api.Group("/auth", middleware.RequireJSON)
 	auth.Post("/register", deps.AuthService.Register)
 	auth.Post("/login", middleware.LoginRateLimiter(), deps.AuthService.Login)
@@ -42,12 +43,19 @@ func Register(app *fiber.App, deps Dependencies) {
 		middleware.RequireJSON,
 		middleware.RequireAuth(deps.JWT),
 	)
-	students.Get("/", deps.StudentService.ListStudents)
+
+	perms := deps.Permissions
+
+	// Route-level permission guards
+	students.Get("/", middleware.RequirePermission(perms, "student:list"), deps.StudentService.ListStudents)
+	students.Post("/", middleware.RequirePermission(perms, "student:create"), deps.StudentService.CreateStudent)
+	students.Delete("/:id", middleware.RequirePermission(perms, "student:delete"), deps.StudentService.DeleteStudent)
+	students.Patch("/:id/role", middleware.RequirePermission(perms, "role:assign"), deps.StudentService.AssignRole)
+
+	// Ownership-checked
 	students.Get("/:id", deps.StudentService.GetStudent)
-	students.Post("/", deps.StudentService.CreateStudent)
 	students.Put("/:id", deps.StudentService.ReplaceStudent)
 	students.Patch("/:id", deps.StudentService.PatchStudent)
-	students.Delete("/:id", deps.StudentService.DeleteStudent)
 }
 
 func healthCheck(pool *pgxpool.Pool) fiber.Handler {
