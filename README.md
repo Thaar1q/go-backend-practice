@@ -41,6 +41,14 @@ Ongoing project about learning Go Language.
 * Defense implementations against brute-force (IP-based rate limiting) and timing-based user enumeration
 * Pure unit-tested validation rules for credentials and password strength
 
+##### Module 6
+* Role-Based Access Control (RBAC) architecture with relational schema (`roles`, `permissions`, `role_permissions`)
+* Data ownership tracking (`owner_id`) with referential integrity constraints and data backfill migrations
+* High-performance in-memory permission caching (`PermissionSet`) using nested hash maps for $O(1)$ lookups and fail-closed security
+* Two-layer authorization design: coarse-grained route guards (`RequirePermission`) and fine-grained service-layer ownership validation (`CanAccessStudent`)
+* Defense-in-depth mitigations against Broken Access Control (OWASP Top 10 #1), IDOR vulnerabilities, administrative self-demotion, and self-deletion
+* Deterministic unit testing for authorization domain logic (`student_authz_rules_test.go`) and automated multi-role test matrix validation (`_Test/data_test_module6.ps1`)
+
 ---
 
 #### How to Initialize
@@ -55,26 +63,47 @@ Ongoing project about learning Go Language.
 1. Ensure the PostgreSQL service is active and accessible.
 2. Create the target database (e.g., go_backend_practice):
    CREATE DATABASE go_backend_practice;
-3. Execute the migration script located at migrations/001_create_students.sql:
+3. Execute the migration scripts:
    psql -U postgres -d go_backend_practice -f migrations/001_create_students.sql
    psql -U postgres -d go_backend_practice -f migrations/002_auth.sql
+   psql -U postgres -d go_backend_practice -f migrations/003_rbac.sql
 
 ##### Database Schema
 ```
+CREATE TABLE IF NOT EXISTS roles (
+    name        VARCHAR(20) PRIMARY KEY,
+    description VARCHAR(150) NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS permissions (
+    name        VARCHAR(50) PRIMARY KEY,
+    description VARCHAR(150) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS role_permissions (
+    role_name       VARCHAR(20) NOT NULL REFERENCES roles(name) ON DELETE CASCADE,
+    permission_name VARCHAR(50) NOT NULL REFERENCES permissions(name) ON DELETE CASCADE,
+    PRIMARY KEY (role_name, permission_name)
+);
+
 CREATE TABLE IF NOT EXISTS students (
     id         SERIAL PRIMARY KEY,
     nim        VARCHAR(50) NOT NULL UNIQUE,
     name       VARCHAR(100) NOT NULL,
     grade      FLOAT NOT NULL,
     is_active  BOOLEAN NOT NULL DEFAULT TRUE,
-    role       VARCHAR(20) NOT NULL DEFAULT 'student',
+    role       VARCHAR(20) NOT NULL DEFAULT 'student' REFERENCES roles(name) ON UPDATE CASCADE,
     password   TEXT NOT NULL DEFAULT '',
+    owner_id   INTEGER REFERENCES students(id) ON DELETE CASCADE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE INDEX IF NOT EXISTS idx_students_name_lower ON students (LOWER(name));
 CREATE UNIQUE INDEX IF NOT EXISTS idx_students_nim_unique ON students (LOWER(nim));
 CREATE INDEX IF NOT EXISTS idx_students_is_active ON students (is_active);
+CREATE INDEX IF NOT EXISTS idx_students_role ON students (role);
+CREATE INDEX IF NOT EXISTS idx_students_owner_id ON students (owner_id);
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id         BIGSERIAL PRIMARY KEY,
@@ -152,6 +181,12 @@ JWT_ISSUER=go_backend_practice
      cd go_module5
      go run .
      ```
+
+   * Module 6:
+     ```
+     cd go_module6
+     go run .
+     ```
 4. Run Unit Tests (currently for module 4 and above):
    ```
    cd go_module[x]
@@ -164,17 +199,18 @@ Base URL: http://localhost:3000/api/v1/students
 
 | Method | Endpoint | Query / Path / Header Params | Request Body (JSON) | Possible Statuses | Response Body Example |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| `POST` | `/api/v1/auth/register` | *(None)* | `{"nim":"123","name":"User","grade":3.5,"password":"password123"}` | 201 Created<br>400 Bad Request<br>409 Conflict<br>422 Unprocessable Entity | `{"success":true,"message":"registration successful","data":{"id":1,"nim":"123","name":"User","grade":3.5,"role":"student","is_active":true,"created_at":"..."}}`[cite: 2] |
-| `POST` | `/api/v1/auth/login` | *(None)* | `{"nim":"123","password":"password123"}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>429 Too Many Requests | `{"success":true,"message":"login successful","data":{"access_token":"...","refresh_token":"...","token_type":"Bearer","expires_in":900}}`[cite: 2] |
-| `POST` | `/api/v1/auth/refresh` | *(None)* | `{"refresh_token":"..."}` | 200 OK<br>400 Bad Request<br>401 Unauthorized | `{"success":true,"message":"token successfully refreshed","data":{"access_token":"...","refresh_token":"...","token_type":"Bearer","expires_in":900}}`[cite: 2] |
-| `POST` | `/api/v1/auth/logout` | *(None)* | `{"refresh_token":"..."}` | 200 OK<br>400 Bad Request | `{"success":true,"message":"logout successful","data":null}`[cite: 2] |
-| `GET` | `/api/v1/auth/me` | `Authorization: Bearer <token>` | *(None)* | 200 OK<br>401 Unauthorized | `{"success":true,"message":"user profile retrieved","data":{"user_id":1,"username":"...","role":"student"}}`[cite: 2] |
-| `GET` | `/api/v1/students` | `Authorization: Bearer <token>`<br>page (int, default 1)<br>limit (int, default 10, max 100)<br>search (string)<br>sort (id, nim, name, grade)<br>order (asc, desc)<br>is_active (bool)<br>min_grade (float) | *(None)* | 200 OK<br>401 Unauthorized | `{"success":true,"message":"student list successfully retrieved","data":[...],"meta":{"page":1,"limit":10,"total":1,"total_pages":1}}`[cite: 1, 2] |
-| `GET` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>`:id` (int, path) | *(None)* | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>404 Not Found | `{"success":true,"message":"student found","data":{"id":1,"nim":"000000001","name":"mahasiswaAA","grade":3.75,"is_active":true,"created_at":"..."}}`[cite: 1, 2] |
-| `POST` | `/api/v1/students` | `Authorization: Bearer <token>` | `{"nim":"000000001","name":"mahasiswaAA","grade":3.75}` | 201 Created<br>400 Bad Request<br>401 Unauthorized<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully created","data":{...}}`<br>Header: `Location: /api/v1/students/1`[cite: 1, 2] |
-| `PUT` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>`:id` (int, path) | `{"nim":"000000001","name":"mahasiswaAA_baru","grade":3.80,"is_active":false}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully replaced","data":{...}}`[cite: 1, 2] |
-| `PATCH` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>`:id` (int, path) | `{"grade":3.90}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully partially updated","data":{...}}`[cite: 1, 2] |
-| `DELETE` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>`:id` (int, path) | *(None)* | 204 No Content<br>400 Bad Request<br>401 Unauthorized<br>404 Not Found | *(Empty Body)*[cite: 1, 2] |
+| `POST` | `/api/v1/auth/register` | *(None)* | `{"nim":"123","name":"User","grade":3.5,"password":"password123"}` | 201 Created<br>400 Bad Request<br>409 Conflict<br>422 Unprocessable Entity | `{"success":true,"message":"registration successful","data":{"id":1,"nim":"123","name":"User","grade":3.5,"role":"student","is_active":true,"owner_id":1,"created_at":"..."}}` |
+| `POST` | `/api/v1/auth/login` | *(None)* | `{"nim":"123","password":"password123"}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>429 Too Many Requests | `{"success":true,"message":"login successful","data":{"access_token":"...","refresh_token":"...","token_type":"Bearer","expires_in":900}}` |
+| `POST` | `/api/v1/auth/refresh` | *(None)* | `{"refresh_token":"..."}` | 200 OK<br>400 Bad Request<br>401 Unauthorized | `{"success":true,"message":"token successfully refreshed","data":{"access_token":"...","refresh_token":"...","token_type":"Bearer","expires_in":900}}` |
+| `POST` | `/api/v1/auth/logout` | *(None)* | `{"refresh_token":"..."}` | 200 OK<br>400 Bad Request | `{"success":true,"message":"logout successful","data":null}` |
+| `GET` | `/api/v1/auth/me` | `Authorization: Bearer <token>` | *(None)* | 200 OK<br>401 Unauthorized | `{"success":true,"message":"profile retrieved successfully","data":{"student":{"id":1,"nim":"...","role":"student",...},"permissions":["..."]}}` |
+| `GET` | `/api/v1/students` | `Authorization: Bearer <token>`<br>*(Guard: `student:list` — Admin, Staff)*<br>page (int, default 1)<br>limit (int, default 10, max 100)<br>search (string)<br>sort (id, nim, name, grade)<br>order (asc, desc)<br>is_active (bool)<br>min_grade (float) | *(None)* | 200 OK<br>401 Unauthorized<br>403 Forbidden | `{"success":true,"message":"student list successfully retrieved","data":[...],"meta":{"page":1,"limit":10,"total":1,"total_pages":1}}` |
+| `GET` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: Ownership or `student:read:any`)*<br>`:id` (int, path) | *(None)* | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found | `{"success":true,"message":"student found","data":{"id":1,"nim":"000000001","name":"mahasiswaAA","grade":3.75,"role":"student","is_active":true,"owner_id":1,"created_at":"..."}}` |
+| `POST` | `/api/v1/students` | `Authorization: Bearer <token>`<br>*(Guard: `student:create` — Admin, Staff)* | `{"nim":"000000001","name":"mahasiswaAA","grade":3.75}` | 201 Created<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully created","data":{...}}`<br>Header: `Location: /api/v1/students/1` |
+| `PUT` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: Ownership or `student:update:any`)*<br>`:id` (int, path) | `{"nim":"000000001","name":"mahasiswaAA_baru","grade":3.80,"is_active":false}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully replaced","data":{...}}` |
+| `PATCH` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: Ownership or `student:update:any`)*<br>`:id` (int, path) | `{"grade":3.90}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully partially updated","data":{...}}` |
+| `PATCH` | `/api/v1/students/:id/role` | `Authorization: Bearer <token>`<br>*(Guard: `role:assign` — Admin only, Non-Self)*<br>`:id` (int, path) | `{"role":"staff"}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found<br>422 Unprocessable Entity | `{"success":true,"message":"student role successfully updated","data":{"id":2,"nim":"...","role":"staff",...}}` |
+| `DELETE` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: `student:delete` — Admin only, Non-Self)*<br>`:id` (int, path) | *(None)* | 204 No Content<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found | *(Empty Body)* |
 ---
 
 #### References Used
@@ -188,3 +224,5 @@ Base URL: http://localhost:3000/api/v1/students
 * https://pkg.go.dev/github.com/golang-jwt/jwt/v5
 * https://pkg.go.dev/golang.org/x/crypto/bcrypt 
 * https://owasp.org/www-project-top-ten/ 
+* https://owasp.org/Top10/A01_2021-Broken_Access_Control/
+* https://csrc.nist.gov/projects/role-based-access-control 

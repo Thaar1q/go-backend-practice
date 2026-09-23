@@ -52,6 +52,14 @@ AI tools were used for the following areas:
   - Debugged DTO deserialization binding issues (`LoginRequest` tag mapping for NIM vs. Username) causing 401 Unauthorized failures during automated testing.
   - Suggested conventional commit messages and outlined the compliance test matrix for rate limiting (429) and route authorization.
 
+- **Module 6 (Authorization & RBAC):**
+  - Clarified Role-Based Access Control schema definitions across `roles`, `permissions`, and `role_permissions` relational tables.
+  - Advised on in-memory permission caching architecture (`PermissionSet`) and fail-closed RBAC middleware concepts (`RequirePermission`).
+  - Advised on domain authorization logic (`CanAccessStudent`) to enforce resource ownership (`owner_id`) alongside global permissions.
+  - Assisted in debugging foreign key integrity constraints in `003_rbac.sql` (`student:create`) and router dependency injection wiring in `main.go`.
+  - Troubleshot Windows PowerShell syntax escapes and helped structure the 12-step verification runner (`data_test_module6.ps1`).
+  - Assisted in editorial refinement and report formatting (`Tugas6_434241049.md`).
+
 ## 3. Human Oversight & Verification
 
 - **Code Review:** All generated code, structural patterns, and helper functions were reviewed, adapted, and tested manually.
