@@ -11,6 +11,7 @@ type Student struct {
 	Password  string    `json:"-"`
 	Role      string    `json:"role"`
 	IsActive  bool      `json:"is_active"`
+	OwnerID   int       `json:"owner_id"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -37,6 +38,11 @@ type PatchStudentRequest struct {
 	Name     *string  `json:"name,omitempty"`
 	Grade    *float64 `json:"grade,omitempty"`
 	IsActive *bool    `json:"is_active,omitempty"`
+}
+
+// ROLES
+type AssignRoleRequest struct {
+	Role string `json:"role"`
 }
 
 // 3. Response Structure
