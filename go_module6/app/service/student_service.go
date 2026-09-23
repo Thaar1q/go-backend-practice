@@ -14,11 +14,18 @@ import (
 
 // 1. Handler Struct & Constructor
 type StudentService struct {
-	repo repository.StudentRepository
+	repo        repository.StudentRepository
+	permissions *helper.PermissionSet
 }
 
-func NewStudentService(repo repository.StudentRepository) *StudentService {
-	return &StudentService{repo: repo}
+func NewStudentService(
+	repo repository.StudentRepository,
+	permissions *helper.PermissionSet,
+) *StudentService {
+	return &StudentService{
+		repo:        repo,
+		permissions: permissions,
+	}
 }
 
 func translateError(c *fiber.Ctx, err error, pesanUmum string) error {
