@@ -15,16 +15,16 @@ func ValidateRegister(req model.RegisterRequest) map[string]string {
 	nim := strings.TrimSpace(req.NIM)
 	switch {
 	case nim == "":
-		errs["nim"] = "must be filled"
+		errs["nim"] = "is required"
 	case len(nim) < 3:
-		errs["nim"] = "must be a minimum of 3 characters"
+		errs["nim"] = "must be at least 3 characters"
 	case !isValidNIM(nim):
-		errs["nim"] = "can only include letters and numbers"
+		errs["nim"] = "must only contain letters and numbers"
 	}
 
 	name := strings.TrimSpace(req.Name)
 	if name == "" {
-		errs["name"] = "must be filled"
+		errs["name"] = "is required"
 	}
 
 	if req.Grade < 0 || req.Grade > 4.0 {
@@ -53,7 +53,7 @@ func ValidateLogin(req model.LoginRequest) map[string]string {
 
 func checkPasswordStrength(password string) string {
 	if len(password) < minPasswordLength {
-		return "must be a minimum of 8 characters"
+		return "must be at least 8 characters"
 	}
 
 	var hasLetter, hasDigit bool
@@ -67,7 +67,7 @@ func checkPasswordStrength(password string) string {
 	}
 
 	if !hasLetter || !hasDigit {
-		return "must contain letters and numbers"
+		return "must contain both letters and numbers"
 	}
 
 	weak := map[string]bool{
@@ -75,7 +75,7 @@ func checkPasswordStrength(password string) string {
 		"admin123": true, "password123": true,
 	}
 	if weak[strings.ToLower(password)] {
-		return "password too common"
+		return "password is too common"
 	}
 
 	return ""
