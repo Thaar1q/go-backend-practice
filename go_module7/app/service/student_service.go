@@ -28,14 +28,14 @@ func NewStudentService(
 	}
 }
 
-func translateError(c *fiber.Ctx, err error, pesanUmum string) error {
+func translateError(err error, entity string) error {
 	switch {
 	case errors.Is(err, repository.ErrNotFound):
-		return helper.Fail(c, fiber.StatusNotFound, "student not found")
+		return helper.NotFound(entity + " not found")
 	case errors.Is(err, repository.ErrDuplicate):
-		return helper.Fail(c, fiber.StatusConflict, "NIM already registered")
+		return helper.Conflict("NIM already registered")
 	default:
-		return helper.Fail(c, fiber.StatusInternalServerError, pesanUmum)
+		return helper.Internal(err)
 	}
 }
 
@@ -48,7 +48,7 @@ func (h *StudentService) ListStudents(c *fiber.Ctx) error {
 	// Fetch from DB
 	result, total, err := h.repo.FindAll(ctx, q)
 	if err != nil {
-		return helper.Fail(c, fiber.StatusInternalServerError, "failed to fetch student list")
+		return helper.Internal(err)
 	}
 
 	totalPages := CountTotalPages(total, q.Limit)
@@ -65,21 +65,21 @@ func (h *StudentService) GetStudent(c *fiber.Ctx) error {
 
 	current, ok := helper.CurrentUser(c)
 	if !ok {
-		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+		return helper.Unauthorized("not authenticated")
 	}
 
 	id, valid := helper.ParamID(c)
 	if !valid {
-		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+		return helper.BadRequest("id must be a positive number")
 	}
 
 	s, err := h.repo.FindByID(ctx, id)
 	if err != nil {
-		return translateError(c, err, "failed to find student")
+		return translateError(err, "student")
 	}
 
 	if !CanAccessStudent(current, s.OwnerID, h.permissions, "student:read:any") {
-		return helper.Fail(c, fiber.StatusForbidden, "not allowed to access others' data")
+		return helper.Forbidden("not allowed to access others' data")
 	}
 
 	return helper.Success(c, "student found", s)
@@ -92,19 +92,19 @@ func (h *StudentService) CreateStudent(c *fiber.Ctx) error {
 
 	current, ok := helper.CurrentUser(c)
 	if !ok {
-		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+		return helper.Unauthorized("not authenticated")
 	}
 
 	var req model.CreateStudentRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	req.NIM = strings.TrimSpace(req.NIM)
 	req.Name = strings.TrimSpace(req.Name)
 
 	if errs := ValidateCreate(req); len(errs) > 0 {
-		return helper.FailValidation(c, errs)
+		return helper.Validation(errs)
 	}
 
 	new := model.Student{
@@ -119,7 +119,7 @@ func (h *StudentService) CreateStudent(c *fiber.Ctx) error {
 	// Save to DB
 	createdItem, err := h.repo.Create(ctx, new)
 	if err != nil {
-		return translateError(c, err, "failed to save student")
+		return translateError(err, "student")
 	}
 
 	return helper.Created(c, "student successfully created", createdItem, "/api/v1/students/"+strconv.Itoa(createdItem.ID))
@@ -132,33 +132,33 @@ func (h *StudentService) ReplaceStudent(c *fiber.Ctx) error {
 
 	current, ok := helper.CurrentUser(c)
 	if !ok {
-		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+		return helper.Unauthorized("not authenticated")
 	}
 
 	id, valid := helper.ParamID(c)
 	if !valid {
-		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+		return helper.BadRequest("id must be a positive number")
 	}
 
 	s, err := h.repo.FindByID(ctx, id)
 	if err != nil {
-		return translateError(c, err, "failed to find student")
+		return translateError(err, "student")
 	}
 
 	if !CanAccessStudent(current, s.OwnerID, h.permissions, "student:update:any") {
-		return helper.Fail(c, fiber.StatusForbidden, "not allowed to update others' data")
+		return helper.Forbidden("not allowed to update others' data")
 	}
 
 	var req model.ReplaceStudentRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	req.NIM = strings.TrimSpace(req.NIM)
 	req.Name = strings.TrimSpace(req.Name)
 
 	if errs := ValidateReplace(req); len(errs) > 0 {
-		return helper.FailValidation(c, errs)
+		return helper.Validation(errs)
 	}
 
 	updated := model.Student{
@@ -172,7 +172,7 @@ func (h *StudentService) ReplaceStudent(c *fiber.Ctx) error {
 	// Update DB
 	result, err := h.repo.Update(ctx, updated)
 	if err != nil {
-		return translateError(c, err, "failed to update student")
+		return translateError(err, "student")
 	}
 
 	return helper.Success(c, "student successfully replaced", result)
@@ -185,42 +185,42 @@ func (h *StudentService) PatchStudent(c *fiber.Ctx) error {
 
 	current, ok := helper.CurrentUser(c)
 	if !ok {
-		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+		return helper.Unauthorized("not authenticated")
 	}
 
 	id, valid := helper.ParamID(c)
 	if !valid {
-		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+		return helper.BadRequest("id must be a positive number")
 	}
 
 	s, err := h.repo.FindByID(ctx, id)
 	if err != nil {
-		return translateError(c, err, "failed to find student")
+		return translateError(err, "student")
 	}
 
 	if !CanAccessStudent(current, s.OwnerID, h.permissions, "student:update:any") {
-		return helper.Fail(c, fiber.StatusForbidden, "not allowed to update others' data")
+		return helper.Forbidden("not allowed to update others' data")
 	}
 
 	var req model.PatchStudentRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	if IsEmptyPatch(req) {
-		return helper.Fail(c, fiber.StatusBadRequest, "no fields to update")
+		return helper.BadRequest("no fields to update")
 	}
 
 	// 1. Validate and map new fields
 	updated, errs := ApplyPatch(s, req)
 	if len(errs) > 0 {
-		return helper.FailValidation(c, errs)
+		return helper.Validation(errs)
 	}
 
 	// 2. Update DB
 	result, err := h.repo.Update(ctx, updated)
 	if err != nil {
-		return translateError(c, err, "failed to update student")
+		return translateError(err, "student")
 	}
 
 	return helper.Success(c, "student successfully partially updated", result)
@@ -233,26 +233,26 @@ func (h *StudentService) AssignRole(c *fiber.Ctx) error {
 
 	current, ok := helper.CurrentUser(c)
 	if !ok {
-		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+		return helper.Unauthorized("not authenticated")
 	}
 
 	id, valid := helper.ParamID(c)
 	if !valid {
-		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+		return helper.BadRequest("id must be a positive number")
 	}
 
 	var req model.AssignRoleRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	if errs := ValidateAssignRole(current, id, req, h.permissions); len(errs) > 0 {
-		return helper.FailValidation(c, errs)
+		return helper.Validation(errs)
 	}
 
 	result, err := h.repo.UpdateRole(ctx, id, strings.TrimSpace(req.Role))
 	if err != nil {
-		return translateError(c, err, "failed to update student role")
+		return translateError(err, "student")
 	}
 
 	return helper.Success(c, "student role successfully updated", result)
@@ -265,21 +265,21 @@ func (h *StudentService) DeleteStudent(c *fiber.Ctx) error {
 
 	current, ok := helper.CurrentUser(c)
 	if !ok {
-		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+		return helper.Unauthorized("not authenticated")
 	}
 
 	id, valid := helper.ParamID(c)
 	if !valid {
-		return helper.Fail(c, fiber.StatusBadRequest, "id must be a positive number")
+		return helper.BadRequest("id must be a positive number")
 	}
 
 	if current.UserID == id {
-		return helper.Fail(c, fiber.StatusForbidden, "cannot delete own account")
+		return helper.Forbidden("cannot delete own account")
 	}
 
 	err := h.repo.Delete(ctx, id)
 	if err != nil {
-		return translateError(c, err, "failed to delete student")
+		return translateError(err, "student")
 	}
 
 	return helper.NoContent(c)

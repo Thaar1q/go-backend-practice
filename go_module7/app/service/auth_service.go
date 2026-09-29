@@ -46,19 +46,19 @@ func (s *AuthService) Register(c *fiber.Ctx) error {
 
 	var req model.RegisterRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	req.NIM = strings.TrimSpace(req.NIM)
 	req.Name = strings.TrimSpace(req.Name)
 
 	if errs := ValidateRegister(req); len(errs) > 0 {
-		return helper.FailValidation(c, errs)
+		return helper.Validation(errs)
 	}
 
 	hashed, err := helper.HashPassword(req.Password)
 	if err != nil {
-		return helper.Fail(c, fiber.StatusInternalServerError, "failed to process password")
+		return helper.Internal(err)
 	}
 
 	created, err := s.students.Create(ctx, model.Student{
@@ -71,9 +71,9 @@ func (s *AuthService) Register(c *fiber.Ctx) error {
 	})
 	if err != nil {
 		if errors.Is(err, repository.ErrDuplicate) {
-			return helper.Fail(c, fiber.StatusConflict, "NIM is already registered")
+			return helper.Conflict("NIM is already registered")
 		}
-		return helper.Fail(c, fiber.StatusInternalServerError, "failed to register student")
+		return helper.Internal(err)
 	}
 
 	return helper.Created(c, "registration successful", created,
@@ -86,7 +86,7 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 
 	var req model.LoginRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	// Support both .NIM or .Username
@@ -96,31 +96,29 @@ func (s *AuthService) Login(c *fiber.Ctx) error {
 	}
 
 	if identifier == "" || req.Password == "" {
-		return helper.FailValidation(c, map[string]string{
-			"nim":      "must be filled",
-			"password": "must be filled",
+		return helper.Validation(map[string]string{
+			"nim":      "is required",
+			"password": "is required",
 		})
 	}
 
 	student, err := s.students.FindByUsername(ctx, identifier)
 	if err != nil {
-		println("DEBUG LOGIN ERROR 1: user not found:", err.Error())
 		helper.VerifyDummyPassword(req.Password)
-		return helper.Fail(c, fiber.StatusUnauthorized, "invalid username or password")
+		return helper.Unauthorized("invalid username or password")
 	}
 
 	if !helper.VerifyPassword(student.Password, req.Password) {
-		println("DEBUG LOGIN ERROR 2: password mismatch! hash in db is:", student.Password)
-		return helper.Fail(c, fiber.StatusUnauthorized, "invalid username or password")
+		return helper.Unauthorized("invalid username or password")
 	}
 
 	if !student.IsActive {
-		return helper.Fail(c, fiber.StatusForbidden, "account is deactivated")
+		return helper.Forbidden("account is deactivated")
 	}
 
 	pair, err := s.issueTokenPair(ctx, student)
 	if err != nil {
-		return helper.Fail(c, fiber.StatusInternalServerError, "failed to generate tokens")
+		return helper.Internal(err)
 	}
 
 	return helper.Success(c, "login successful", pair)
@@ -132,33 +130,33 @@ func (s *AuthService) Refresh(c *fiber.Ctx) error {
 
 	var req model.RefreshRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	if strings.TrimSpace(req.RefreshToken) == "" {
-		return helper.Fail(c, fiber.StatusBadRequest, "refresh_token is required")
+		return helper.BadRequest("refresh_token is required")
 	}
 
 	hash := helper.SHA256Hex(req.RefreshToken)
 
 	stored, err := s.tokens.FindActive(ctx, hash)
 	if err != nil {
-		return helper.Fail(c, fiber.StatusUnauthorized,
+		return helper.Unauthorized(
 			"refresh token is invalid or has expired")
 	}
 
 	student, err := s.students.FindByID(ctx, stored.UserID)
 	if err != nil || !student.IsActive {
-		return helper.Fail(c, fiber.StatusUnauthorized, "account cannot be accessed")
+		return helper.Unauthorized("account cannot be accessed")
 	}
 
 	if err := s.tokens.Revoke(ctx, hash); err != nil {
-		return helper.Fail(c, fiber.StatusInternalServerError, "failed to rotate refresh token")
+		return helper.Internal(err)
 	}
 
 	pair, err := s.issueTokenPair(ctx, student)
 	if err != nil {
-		return helper.Fail(c, fiber.StatusInternalServerError, "failed to generate tokens")
+		return helper.Internal(err)
 	}
 
 	return helper.Success(c, "token successfully refreshed", pair)
@@ -170,7 +168,7 @@ func (s *AuthService) Logout(c *fiber.Ctx) error {
 
 	var req model.RefreshRequest
 	if err := c.BodyParser(&req); err != nil {
-		return helper.Fail(c, fiber.StatusBadRequest, "body must be valid JSON")
+		return helper.BadRequest("body must be valid JSON")
 	}
 
 	if strings.TrimSpace(req.RefreshToken) != "" {
@@ -186,12 +184,12 @@ func (s *AuthService) Me(c *fiber.Ctx) error {
 
 	authUser, ok := helper.CurrentUser(c)
 	if !ok {
-		return helper.Fail(c, fiber.StatusUnauthorized, "unauthenticated")
+		return helper.Unauthorized("not authenticated")
 	}
 
 	student, err := s.students.FindByID(ctx, authUser.UserID)
 	if err != nil {
-		return helper.Fail(c, fiber.StatusNotFound, "student not found")
+		return helper.NotFound("student not found")
 	}
 
 	return helper.Success(c, "profile retrieved successfully", fiber.Map{

@@ -10,12 +10,12 @@ func RequirePermission(perms *helper.PermissionSet, permission string) fiber.Han
 	return func(c *fiber.Ctx) error {
 		user, ok := helper.CurrentUser(c)
 		if !ok {
-			return helper.Fail(c, fiber.StatusUnauthorized, "not authenticated")
+			return helper.Unauthorized("not authenticated")
 		}
 
 		if !perms.Can(user.Role, permission) {
-			return helper.Fail(c, fiber.StatusForbidden,
-				"role "+user.Role+" does not have permission to "+permission)
+			return helper.Forbidden(
+				"role " + user.Role + " does not have permission to " + permission)
 		}
 
 		return c.Next()
@@ -31,11 +31,11 @@ func RequireRole(roles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		user, ok := helper.CurrentUser(c)
 		if !ok {
-			return helper.Fail(c, fiber.StatusUnauthorized, "not authenticated")
+			return helper.Unauthorized("not authenticated")
 		}
 
 		if _, granted := allowed[user.Role]; !granted {
-			return helper.Fail(c, fiber.StatusForbidden,
+			return helper.Forbidden(
 				"your role does not have permission to access this endpoint")
 		}
 
