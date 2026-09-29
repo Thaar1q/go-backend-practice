@@ -15,6 +15,11 @@ func ReqCtx(c *fiber.Ctx) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(c.UserContext(), 5*time.Second)
 }
 
+func RequestID(c *fiber.Ctx) string {
+	id, _ := c.Locals("requestid").(string)
+	return id
+}
+
 func ParamID(c *fiber.Ctx) (int, bool) {
 	id, err := strconv.Atoi(c.Params("id"))
 	if err != nil || id < 1 {
