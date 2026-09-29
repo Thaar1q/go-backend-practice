@@ -55,6 +55,14 @@ type WebResponse struct {
 	Errors  any    `json:"errors,omitempty"`
 }
 
+type ErrorResponse struct {
+	Success   bool              `json:"success"`
+	Code      string            `json:"code"`
+	Message   string            `json:"message"`
+	Fields    map[string]string `json:"fields,omitempty"`
+	RequestID string            `json:"request_id,omitempty"`
+}
+
 // 4. Query & Metadata
 type Meta struct {
 	Page       int `json:"page"`
