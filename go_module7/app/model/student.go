@@ -52,7 +52,7 @@ type WebResponse struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
 	Data    any    `json:"data,omitempty"`
-	Meta    *Meta  `json:"meta,omitempty"`
+	Meta    any    `json:"meta,omitempty"`
 	Errors  any    `json:"errors,omitempty"`
 }
 
@@ -84,4 +84,23 @@ type ListQuery struct {
 
 func (q ListQuery) Offset() int {
 	return (q.Page - 1) * q.Limit
+}
+
+// 5. Cursor
+type Cursor struct {
+	CreatedAt time.Time
+	ID        int
+}
+
+type CursorQuery struct {
+	Limit    int
+	Search   string
+	IsActive *bool
+	After    *Cursor
+}
+
+type CursorMeta struct {
+	Limit      int    `json:"limit"`
+	NextCursor string `json:"next_cursor,omitempty"`
+	HasMore    bool   `json:"has_more"`
 }

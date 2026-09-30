@@ -43,19 +43,30 @@ func translateError(err error, entity string) error {
 func (h *StudentService) ListStudents(c *fiber.Ctx) error {
 	ctx, cancel := helper.ReqCtx(c)
 	defer cancel()
-	q := helper.ParseListQuery(c)
+
+	q, err := helper.ParseCursorQuery(c)
+	if err != nil {
+		return helper.BadRequest("invalid cursor")
+	}
 
 	// Fetch from DB
-	result, total, err := h.repo.FindAll(ctx, q)
+	rows, err := h.repo.FindAfterCursor(ctx, q)
 	if err != nil {
 		return helper.Internal(err)
 	}
 
-	totalPages := CountTotalPages(total, q.Limit)
+	hasMore := len(rows) > q.Limit
+	if hasMore {
+		rows = rows[:q.Limit]
+	}
 
-	return helper.SuccessList(c, "student list successfully retrieved", result, &model.Meta{
-		Page: q.Page, Limit: q.Limit, Total: total, TotalPages: totalPages,
-	})
+	meta := &model.CursorMeta{Limit: q.Limit, HasMore: hasMore}
+	if hasMore && len(rows) > 0 {
+		last := rows[len(rows)-1]
+		meta.NextCursor = helper.EncodeCursor(last.CreatedAt, last.ID)
+	}
+
+	return helper.SuccessCursor(c, "student list successfully retrieved", rows, meta)
 }
 
 // 3. GET ONE
