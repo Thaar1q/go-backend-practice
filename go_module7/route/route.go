@@ -63,7 +63,7 @@ func healthCheck(pool *pgxpool.Pool) fiber.Handler {
 		ctx, cancel := context.WithTimeout(c.UserContext(), 2*time.Second)
 		defer cancel()
 		if err := pool.Ping(ctx); err != nil {
-			return helper.Fail(c, fiber.StatusServiceUnavailable, "database down")
+			return helper.ServiceUnavailable("database down")
 		}
 		return helper.Success(c, "server is running", fiber.Map{"timestamp": time.Now()})
 	}
