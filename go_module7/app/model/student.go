@@ -18,7 +18,7 @@ type Student struct {
 // 2. Request Payloads
 // POST
 type CreateStudentRequest struct {
-	NIM      string  `json:"nim" validate:"required,min=3,max=30,number"`
+	NIM      string  `json:"nim" validate:"required,nim"`
 	Name     string  `json:"name" validate:"required,min=3,max=30"`
 	Grade    float64 `json:"grade" validate:"min=0,max=4"`
 	Password string  `json:"password" validate:"required,min=8,max=72,nospace"`
@@ -27,7 +27,7 @@ type CreateStudentRequest struct {
 
 // PUT
 type ReplaceStudentRequest struct {
-	NIM      string   `json:"nim" validate:"required,min=3,max=30,number"`
+	NIM      string   `json:"nim" validate:"required,nim"`
 	Name     string   `json:"name" validate:"required,min=3,max=30"`
 	Grade    *float64 `json:"grade" validate:"required,min=0,max=4"`
 	IsActive bool     `json:"is_active"`
@@ -35,7 +35,7 @@ type ReplaceStudentRequest struct {
 
 // PATCH
 type PatchStudentRequest struct {
-	NIM      *string  `json:"nim,omitempty" validate:"omitnil,min=3,max=30,number"`
+	NIM      *string  `json:"nim,omitempty" validate:"omitnil,nim"`
 	Name     *string  `json:"name,omitempty" validate:"omitnil,min=3,max=30"`
 	Grade    *float64 `json:"grade,omitempty" validate:"omitnil,min=0,max=4"`
 	IsActive *bool    `json:"is_active,omitempty"`

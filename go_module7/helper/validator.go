@@ -37,6 +37,18 @@ func newValidator() *validator.Validate {
 	_ = v.RegisterValidation("strongpassword", func(fl validator.FieldLevel) bool {
 		return checkPasswordStrength(fl.Field().String()) == ""
 	})
+	_ = v.RegisterValidation("nim", func(fl validator.FieldLevel) bool {
+		val := fl.Field().String()
+		if len(val) < 9 || len(val) > 18 {
+			return false
+		}
+		for _, r := range val {
+			if !unicode.IsDigit(r) {
+				return false
+			}
+		}
+		return true
+	})
 
 	return v
 }
@@ -127,6 +139,8 @@ func messageFor(fe validator.FieldError) string {
 			return checkPasswordStrength(value)
 		}
 		return "password does not meet requirements"
+	case "nim":
+		return "must be 9 to 18 numeric digits"
 	case "oneof":
 		return "must be one of: " +
 			strings.ReplaceAll(fe.Param(), " ", ", ")
