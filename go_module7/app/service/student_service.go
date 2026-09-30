@@ -231,6 +231,10 @@ func (h *StudentService) PatchStudent(c *fiber.Ctx) error {
 		return helper.BadRequest("no fields to update")
 	}
 
+	if errs := helper.ValidateStruct(req); errs != nil {
+		return helper.Validation(errs)
+	}
+
 	// 1. Validate and map new fields
 	updated, errs := ApplyPatch(s, req)
 	if len(errs) > 0 {
