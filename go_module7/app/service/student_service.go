@@ -44,6 +44,11 @@ func (h *StudentService) ListStudents(c *fiber.Ctx) error {
 	ctx, cancel := helper.ReqCtx(c)
 	defer cancel()
 
+	format, err := helper.Negotiate(c, helper.FormatJSON, helper.FormatCSV)
+	if err != nil {
+		return err
+	}
+
 	q, err := helper.ParseCursorQuery(c)
 	if err != nil {
 		return helper.BadRequest("invalid cursor")
@@ -66,7 +71,11 @@ func (h *StudentService) ListStudents(c *fiber.Ctx) error {
 		meta.NextCursor = helper.EncodeCursor(last.CreatedAt, last.ID)
 	}
 
-	return helper.SuccessCursor(c, "student list successfully retrieved", rows, meta)
+	if format == helper.FormatCSV {
+		return helper.WriteStudentsCSV(c, rows)
+	}
+
+	return helper.SuccessCursor(c, "student list retrieved successfully", rows, meta)
 }
 
 // 3. GET ONE
