@@ -3,10 +3,10 @@ package model
 import "time"
 
 type RegisterRequest struct {
-	NIM      string  `json:"nim"`
-	Name     string  `json:"name"`
-	Grade    float64 `json:"grade"`
-	Password string  `json:"password"`
+	NIM      string  `json:"nim" validate:"required,min=3,max=30,number"`
+	Name     string  `json:"name" validate:"required,min=3,max=30"`
+	Grade    float64 `json:"grade" validate:"required,min=0,max=4"`
+	Password string  `json:"password" validate:"required,min=8,max=72,nospace,strongpassword"`
 }
 
 type LoginRequest struct {

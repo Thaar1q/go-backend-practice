@@ -18,31 +18,32 @@ type Student struct {
 // 2. Request Payloads
 // POST
 type CreateStudentRequest struct {
-	NIM      string  `json:"nim"`
-	Name     string  `json:"name"`
-	Grade    float64 `json:"grade"`
+	NIM      string  `json:"nim" validate:"required,min=3,max=30,number"`
+	Name     string  `json:"name" validate:"required,min=3,max=30"`
+	Grade    float64 `json:"grade" validate:"min=0,max=4"`
+	Password string  `json:"password" validate:"required,min=8,max=72,nospace"`
 	IsActive bool    `json:"is_active"`
 }
 
 // PUT
 type ReplaceStudentRequest struct {
-	NIM      string   `json:"nim"`
-	Name     string   `json:"name"`
-	Grade    *float64 `json:"grade"`
+	NIM      string   `json:"nim" validate:"required,min=3,max=30,number"`
+	Name     string   `json:"name" validate:"required,min=3,max=30"`
+	Grade    *float64 `json:"grade" validate:"required,min=0,max=4"`
 	IsActive bool     `json:"is_active"`
 }
 
 // PATCH
 type PatchStudentRequest struct {
-	NIM      *string  `json:"nim,omitempty"`
-	Name     *string  `json:"name,omitempty"`
-	Grade    *float64 `json:"grade,omitempty"`
+	NIM      *string  `json:"nim,omitempty" validate:"omitnil,min=3,max=30,number"`
+	Name     *string  `json:"name,omitempty" validate:"omitnil,min=3,max=30"`
+	Grade    *float64 `json:"grade,omitempty" validate:"omitnil,min=0,max=4"`
 	IsActive *bool    `json:"is_active,omitempty"`
 }
 
 // ROLES
 type AssignRoleRequest struct {
-	Role string `json:"role"`
+	Role string `json:"role" validate:"required,oneof=admin student"`
 }
 
 // 3. Response Structure
