@@ -42,12 +42,20 @@ Ongoing project about learning Go Language.
 * Pure unit-tested validation rules for credentials and password strength
 
 ##### Module 6
-* Role-Based Access Control (RBAC) architecture with relational schema (`roles`, `permissions`, `role_permissions`)
-* Data ownership tracking (`owner_id`) with referential integrity constraints and data backfill migrations
-* High-performance in-memory permission caching (`PermissionSet`) using nested hash maps for $O(1)$ lookups and fail-closed security
-* Two-layer authorization design: coarse-grained route guards (`RequirePermission`) and fine-grained service-layer ownership validation (`CanAccessStudent`)
-* Defense-in-depth mitigations against Broken Access Control (OWASP Top 10 #1), IDOR vulnerabilities, administrative self-demotion, and self-deletion
-* Deterministic unit testing for authorization domain logic (`student_authz_rules_test.go`) and automated multi-role test matrix validation (`_Test/data_test_module6.ps1`)
+* Role-Based Access Control (RBAC) with database tables (`roles`, `permissions`, `role_permissions`)
+* Data ownership tracking (`owner_id`) so users can manage their own records
+* In-memory permission cache (`PermissionSet`) for instant permission checks
+* Two-layer access control: route middleware checks permissions, service layer checks resource ownership
+* Protection against common access control issues (IDOR, admin self-demotion, and self-deletion)
+* Unit tests (`student_authz_rules_test.go`) and automated multi-role test script (`_Test/data_test_module6.ps1`)
+
+##### Module 7
+* Input validation using `validator/v10` tags (required fields, NIM format, password rules, and safe PATCH updates with `omitnil`)
+* Cursor-based pagination using base64 tokens instead of page numbers (faster, prevents skipping or duplicate items when new data is added)
+* Database index on `(created_at, id)` to keep pagination queries fast
+* Content negotiation supporting both JSON and CSV export based on the `Accept` header (returns 406 if format not supported)
+* Unified error format (`code`, `message`, `fields`) so errors are consistent and clear across the entire API
+* Automated PowerShell test scripts (`_Test/data_test_module7_D.ps1`) to verify validation, pagination, CSV exports, and errors
 
 ---
 
@@ -67,6 +75,8 @@ Ongoing project about learning Go Language.
    psql -U postgres -d go_backend_practice -f migrations/001_create_students.sql
    psql -U postgres -d go_backend_practice -f migrations/002_auth.sql
    psql -U postgres -d go_backend_practice -f migrations/003_rbac.sql
+   psql -U postgres -d go_backend_practice -f migrations/004_student_permissions.sql
+   psql -U postgres -d go_backend_practice -f migrations/005_cursor_index.sql
 
 ##### Database Schema
 ```
@@ -104,6 +114,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_students_nim_unique ON students (LOWER(nim
 CREATE INDEX IF NOT EXISTS idx_students_is_active ON students (is_active);
 CREATE INDEX IF NOT EXISTS idx_students_role ON students (role);
 CREATE INDEX IF NOT EXISTS idx_students_owner_id ON students (owner_id);
+CREATE INDEX IF NOT EXISTS idx_students_created_at_id_desc ON students (created_at DESC, id DESC);
 
 CREATE TABLE IF NOT EXISTS refresh_tokens (
     id         BIGSERIAL PRIMARY KEY,
@@ -187,6 +198,12 @@ JWT_ISSUER=go_backend_practice
      cd go_module6
      go run .
      ```
+
+   * Module 7:
+     ```
+     cd go_module7
+     go run .
+     ```
 4. Run Unit Tests (currently for module 4 and above):
    ```
    cd go_module[x]
@@ -195,7 +212,7 @@ JWT_ISSUER=go_backend_practice
 ---
 
 #### API Contract
-Base URL: http://localhost:3000/api/v1/students
+Base URL: http://localhost:3000/api/v1
 
 | Method | Endpoint | Query / Path / Header Params | Request Body (JSON) | Possible Statuses | Response Body Example |
 | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -204,13 +221,28 @@ Base URL: http://localhost:3000/api/v1/students
 | `POST` | `/api/v1/auth/refresh` | *(None)* | `{"refresh_token":"..."}` | 200 OK<br>400 Bad Request<br>401 Unauthorized | `{"success":true,"message":"token successfully refreshed","data":{"access_token":"...","refresh_token":"...","token_type":"Bearer","expires_in":900}}` |
 | `POST` | `/api/v1/auth/logout` | *(None)* | `{"refresh_token":"..."}` | 200 OK<br>400 Bad Request | `{"success":true,"message":"logout successful","data":null}` |
 | `GET` | `/api/v1/auth/me` | `Authorization: Bearer <token>` | *(None)* | 200 OK<br>401 Unauthorized | `{"success":true,"message":"profile retrieved successfully","data":{"student":{"id":1,"nim":"...","role":"student",...},"permissions":["..."]}}` |
-| `GET` | `/api/v1/students` | `Authorization: Bearer <token>`<br>*(Guard: `student:list` — Admin, Staff)*<br>page (int, default 1)<br>limit (int, default 10, max 100)<br>search (string)<br>sort (id, nim, name, grade)<br>order (asc, desc)<br>is_active (bool)<br>min_grade (float) | *(None)* | 200 OK<br>401 Unauthorized<br>403 Forbidden | `{"success":true,"message":"student list successfully retrieved","data":[...],"meta":{"page":1,"limit":10,"total":1,"total_pages":1}}` |
+| `GET` | `/api/v1/students` | `Authorization: Bearer <token>`<br>*(Guard: `student:list` — Admin, Staff)*<br>**Headers:** `Accept: application/json` or `text/csv`<br>**Cursor Params (M7):**<br>`cursor` (string, Base64URL)<br>`limit` (int, default 10, max 100)<br>`search` (string)<br>`is_active` (bool)<br>**Offset Params (M2-M6):**<br>`page`, `limit`, `sort`, `order`, `min_grade` | *(None)* | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>406 Not Acceptable | **JSON (Keyset):**<br>`{"success":true,"message":"student list retrieved successfully","data":[...],"meta":{"limit":10,"next_cursor":"...","has_more":true}}`<br><br>**CSV:**<br>`id,nim,name,grade,role,is_active,created_at`<br>`1,123456789,John,3.50,student,true,2026-09-30T10:00:00Z` |
 | `GET` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: Ownership or `student:read:any`)*<br>`:id` (int, path) | *(None)* | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found | `{"success":true,"message":"student found","data":{"id":1,"nim":"000000001","name":"mahasiswaAA","grade":3.75,"role":"student","is_active":true,"owner_id":1,"created_at":"..."}}` |
 | `POST` | `/api/v1/students` | `Authorization: Bearer <token>`<br>*(Guard: `student:create` — Admin, Staff)* | `{"nim":"000000001","name":"mahasiswaAA","grade":3.75}` | 201 Created<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully created","data":{...}}`<br>Header: `Location: /api/v1/students/1` |
 | `PUT` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: Ownership or `student:update:any`)*<br>`:id` (int, path) | `{"nim":"000000001","name":"mahasiswaAA_baru","grade":3.80,"is_active":false}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully replaced","data":{...}}` |
 | `PATCH` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: Ownership or `student:update:any`)*<br>`:id` (int, path) | `{"grade":3.90}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found<br>409 Conflict<br>415 Unsupported Media Type<br>422 Unprocessable Entity | `{"success":true,"message":"student successfully partially updated","data":{...}}` |
 | `PATCH` | `/api/v1/students/:id/role` | `Authorization: Bearer <token>`<br>*(Guard: `role:assign` — Admin only, Non-Self)*<br>`:id` (int, path) | `{"role":"staff"}` | 200 OK<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found<br>422 Unprocessable Entity | `{"success":true,"message":"student role successfully updated","data":{"id":2,"nim":"...","role":"staff",...}}` |
 | `DELETE` | `/api/v1/students/:id` | `Authorization: Bearer <token>`<br>*(Guard: `student:delete` — Admin only, Non-Self)*<br>`:id` (int, path) | *(None)* | 204 No Content<br>400 Bad Request<br>401 Unauthorized<br>403 Forbidden<br>404 Not Found | *(Empty Body)* |
+
+##### Standardized Error Envelope
+```json
+{
+  "success": false,
+  "code": "VALIDATION_ERROR",
+  "message": "validasi gagal",
+  "fields": {
+    "nim": "must be 9 to 18 numeric digits"
+  },
+  "request_id": "c1a2..."
+}
+```
+Machine-readable codes: `VALIDATION_ERROR` (422), `BAD_REQUEST` (400), `UNAUTHORIZED` (401), `FORBIDDEN` (403), `NOT_FOUND` (404), `CONFLICT` (409), `UNSUPPORTED_MEDIA_TYPE` (415), `NOT_ACCEPTABLE` (406), `TOO_MANY_REQUESTS` (429), `SERVICE_UNAVAILABLE` (503), `INTERNAL_ERROR` (500).
+
 ---
 
 #### References Used
@@ -226,3 +258,6 @@ Base URL: http://localhost:3000/api/v1/students
 * https://owasp.org/www-project-top-ten/ 
 * https://owasp.org/Top10/A01_2021-Broken_Access_Control/
 * https://csrc.nist.gov/projects/role-based-access-control 
+* https://github.com/go-playground/validator
+* https://use-the-index-luke.com/no-offset
+* https://www.rfc-editor.org/rfc/rfc9110#section-12.5.1 

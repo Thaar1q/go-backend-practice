@@ -60,6 +60,14 @@ AI tools were used for the following areas:
   - Troubleshot Windows PowerShell syntax escapes and helped structure the 12-step verification runner (`data_test_module6.ps1`).
   - Assisted in editorial refinement and report formatting (`Tugas6_434241049.md`).
 
+- **Module 7 (Advanced API Design):**
+  - Provided syntax examples for `validator/v10` struct tags and custom validator functions (`nim`, `nospace`, `username`, `strongpassword`).
+  - Explained `omitnil` behavior on pointer fields for PATCH requests so omitted fields aren't overwritten.
+  - Discussed cursor pagination concepts and suggested a Base64-encoded `createdAt|id` format for safe navigation.
+  - Clarified Fiber's `Accept` header handling and Go `encoding/csv` writer setup for CSV downloads.
+  - Helped brainstorm standard machine-readable error codes (`VALIDATION_ERROR`, `NOT_ACCEPTABLE`, etc.) and error formats.
+  - Assisted in debugging PowerShell syntax and command escaping for the test runner script (`data_test_module7_D.ps1`).
+
 ## 3. Human Oversight & Verification
 
 - **Code Review:** All generated code, structural patterns, and helper functions were reviewed, adapted, and tested manually.
